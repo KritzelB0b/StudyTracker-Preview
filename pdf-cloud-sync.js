@@ -10,7 +10,7 @@ async function call(method,doc,payload){const res=await fetch(API+'/private/docu
 async function push(){
  if(!ready||!dirty||busy||!id||conflict)return;
  const doc=id,version=generation,rev=revision;
- const snapshot={pages:structuredClone(notes.pages),bookmarks:[...bookmarks]};
+ const snapshot={pages:JSON.parse(JSON.stringify(notes.pages)),bookmarks:[...bookmarks]};
  dirty=false;busy=true;
  try{
   const response=await call('PUT',doc,snapshot);
