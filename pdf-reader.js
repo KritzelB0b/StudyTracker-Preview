@@ -141,9 +141,9 @@ g('stPdfNotesToggle').addEventListener('click',()=>{
 g('stPdfFitWidth').addEventListener('click',()=>{fitWidth=true;g('stPdfFitWidth').setAttribute('aria-pressed','true');refreshFit()});
 document.addEventListener('keydown',event=>{
  if(!documentPDF||!root.classList.contains('st-reader-fullscreen'))return;
+ if(event.key==='Escape'){event.preventDefault();exitReaderFullscreen();requestAnimationFrame(refreshFit);return}
  const target=event.target;
  if(target?.closest?.('input,textarea,select,button,[contenteditable="true"],[role="menu"]'))return;
- if(event.key==='Escape'){exitReaderFullscreen();requestAnimationFrame(refreshFit)}
  if(event.key==='ArrowRight'||event.key==='PageDown'){event.preventDefault();showPage(current+1)}
  if(event.key==='ArrowLeft'||event.key==='PageUp'){event.preventDefault();showPage(current-1)}
 });
