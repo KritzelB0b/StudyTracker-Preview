@@ -17,22 +17,37 @@ async function refresh(){
  if(!enabled()){notice('Bitte zuerst anmelden.');return}
  try{
  const [f,d]=await Promise.all([request('/private/folders'),request('/private/documents'+(folder?'?folder_id='+encodeURIComponent(folder):''))]);
- folders=await f.json();files=await d.json();paint();notice('Privater Cloud-Dateispeicher verbunden.');
+ folders=await f.json();files=await d.json();paint();await showStorage();notice('Privater Cloud-Dateispeicher verbunden.');
  }catch(e){notice(e.message.includes('404')?'Datei-API noch nicht auf Railway bereitgestellt (HTTP 404). Der Backend-Code ist derzeit nur im Entwicklungsbranch.':e.message)}
 }
 function paint(){
  const roots=$('cloudFolderTree'),list=$('cloudFileList');roots.replaceChildren();list.replaceChildren();
  roots.append(button('Hauptordner',()=>{folder=null;refresh()}));
- function child(parent,depth,seen){for(const f of folders.filter(x=>x.parent_id===parent)){if(seen.has(f.id))continue;const b=button('　'.repeat(Math.min(depth,5))+'▸ '+f.name,()=>{folder=f.id;refresh()});if(folder===f.id)b.style.borderColor='#e66700';roots.append(b);child(f.id,depth+1,new Set([...seen,f.id]))}}
+ function child(parent,depth,seen){for(const f of folders.filter(x=>x.parent_id===parent)){if(seen.has(f.id))continue;const b=button('　'.repeat(Math.min(depth,5))+'▸ '+f.name,()=>{folder=f.id;refresh()});if(folder===f.id)b.style.borderColor='#e66700';roots.append(b);const controls=document.createElement('div');controls.className='cloud-folder-actions';controls.append(button('Umbenennen',()=>renameFolder(f)),button('Verschieben',()=>moveFolder(f)),button('Löschen',()=>removeFolder(f)));roots.append(controls);child(f.id,depth+1,new Set([...seen,f.id]))}}
  child(null,0,new Set());
  for(const f of files){
  const row=document.createElement('div');row.className='cloud-file-row';
  const label=document.createElement('span');label.textContent=f.filename+' · '+(f.size/1024/1024).toFixed(2)+' MB';row.append(label);
  if(/\.pdf$/i.test(f.filename))row.append(button('Lesen',()=>openPdf(f)));
- row.append(button('Herunterladen',()=>download(f)));
+ row.append(button('Umbenennen',()=>renameFile(f)));row.append(button('Verschieben',()=>moveFile(f)));row.append(button('Herunterladen',()=>download(f)));
  row.append(button('Löschen',()=>removeFile(f)));list.append(row)}
  if(!files.length)list.textContent='In diesem Ordner sind noch keine Dateien.';
 }
+function destinations(){return [{id:null,name:'Hauptordner'},...folders.map(f=>({id:f.id,name:f.name}))]}
+function askDestination(current,except=[]){
+ const options=destinations().filter(f=>!except.includes(f.id));
+ const answer=prompt('Zielordner auswählen (Nummer):\\n'+options.map((f,i)=>(i+1)+'. '+f.name+(f.id===current?' (aktuell)':'')).join('\\n'));
+ if(answer===null)return undefined;
+ const i=Number(answer)-1;if(!Number.isInteger(i)||i<0||i>=options.length){notice('Ungültiger Zielordner.');return undefined}
+ return options[i].id;
+}
+async function update(path,payload){await request(path,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});await refresh()}
+async function renameFile(file){const name=prompt('Dateiname ändern (Dateiendung beibehalten):',file.filename);if(name===null||!name.trim()||name===file.filename)return;try{await update('/private/documents/'+file.id,{filename:name.trim()})}catch(e){notice(e.message)}}
+async function moveFile(file){const destination=askDestination(file.folder_id);if(destination===undefined||destination===file.folder_id)return;try{await update('/private/documents/'+file.id,{folder_id:destination})}catch(e){notice(e.message)}}
+async function renameFolder(dir){const name=prompt('Ordner umbenennen:',dir.name);if(name===null||!name.trim()||name===dir.name)return;try{await update('/private/folders/'+dir.id,{name:name.trim()})}catch(e){notice(e.message)}}
+async function moveFolder(dir){const destination=askDestination(dir.parent_id,[dir.id]);if(destination===undefined||destination===dir.parent_id)return;try{await update('/private/folders/'+dir.id,{parent_id:destination})}catch(e){notice(e.message)}}
+async function removeFolder(dir){if(!confirm('Leeren Ordner „'+dir.name+'“ löschen? Ordner mit Dateien oder Unterordnern werden nicht gelöscht.'))return;try{await request('/private/folders/'+dir.id,{method:'DELETE'});if(folder===dir.id)folder=null;await refresh()}catch(e){notice(e.message)}}
+async function showStorage(){try{const res=await request('/private/storage');const d=await res.json();const mb=n=>(n/1024/1024).toFixed(1);$('cloudStorageUsage').textContent=mb(d.used_bytes)+' MB von '+mb(d.quota_bytes)+' MB verwendet · '+d.file_count+' Dateien · '+d.folder_count+' Ordner';}catch(e){$('cloudStorageUsage').textContent='Speicherinformationen nicht verfügbar: '+e.message}}
 async function createFolder(){
  if(!enabled())return notice('Bitte zuerst anmelden.');
  const name=prompt('Name des neuen Ordners:');if(!name?.trim())return;
