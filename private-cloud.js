@@ -86,6 +86,7 @@ function openAction(action,item){
  const rename=action.startsWith('rename'),isFile=action.endsWith('File'),dlg=$('cloudActionDialog');
  $('cloudActionError').textContent='';
  $('cloudActionInputWrap').hidden=!rename;$('cloudActionSelectWrap').hidden=rename;
+ $('cloudActionName').required=rename;
  $('cloudActionTitle').textContent=(rename?'Umbenennen':'Verschieben')+' · '+(isFile?'Datei':'Ordner');
  $('cloudActionSave').textContent=rename?'Umbenennen':'Verschieben';
  const name=isFile?item.filename:item.name;
