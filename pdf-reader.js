@@ -109,5 +109,6 @@ g('stPdfSearch').addEventListener('keydown',e=>{if(e.key==='Enter')search()});
 document.addEventListener('visibilitychange',()=>{if(!isOwner()&&documentPDF){clearDocument();report('Reader aus Sicherheitsgründen geschlossen.')}});
 document.querySelectorAll('.nav .tab').forEach(b=>b.addEventListener('click',()=>{if(!isOwner()&&documentPDF)clearDocument()}));
 
+export async function openCloudPdf(file){return openLocal(file)}
 export function navigateToPage(n){return showPage(n)}
 export function getPdfPage(){return current}
