@@ -9,7 +9,7 @@
  const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
  const parse=d=>new Date(d+'T12:00:00');
  const date=d=>parse(d).toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit'});
- const palette=['#e66700','#e8ac67','#6abeb2','#ac8be8','#e57a9b','#6c9bb3'];
+ const palette=['#e97812','#dba563','#87b4a1','#b09dbe','#d59a89','#9bb7bf'];
  const map={dashboard:'dashboard',topics:'modules',semester:'calendar',planner:'calendar',history:'cockpit'};
  const cats={exam:'Prüfung',lecture:'Vorlesung',exercise:'Übung',tutorial:'Tutorium',practical:'Praktikum',coaching:'Coaching',task:'Aufgabe',study:'Lernblock'};
  let data=null,active='dashboard',monthOffset=0,weekOffset=0,selected=iso(new Date()),selectedModule='',error='';
