@@ -1,0 +1,88 @@
+
+/* StudyTracker 3.1 – document reader workspace. No private documents are embedded in CSS. */
+#stPdfReader{position:relative;isolation:isolate}
+#stPdfReader .st-reader-version{display:inline-block;margin-left:8px;padding:3px 9px;border:1px solid #72563d;border-radius:999px;background:#3a2a20;color:#ffc48b;font-size:11px;font-weight:600;vertical-align:middle}
+#stPdfReader .st-pdf-toolbar{display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding-bottom:7px}
+#stPdfReader .st-pdf-toolbar #stPdfFileLabel{min-width:80px;flex:1 1 180px;overflow-wrap:anywhere}
+.st-reader-primary-actions{display:flex;gap:8px;margin-left:auto;align-items:center;flex-wrap:wrap}
+#stPdfReader .st-pdf-controls{gap:8px;padding:10px 0;flex-wrap:wrap;border-bottom:1px solid #524a40;margin-bottom:7px}
+#stPdfReader .st-pdf-controls button{min-height:40px}
+#stPdfReader .st-pdf-controls input{min-height:40px;max-width:85px}
+#stPdfReader .st-pdf-sidebar{border:1px solid #5d5246;background:#201f1c}
+#stPdfReader .st-pdf-sidebar-head strong{font-size:13px}
+#stPdfReader .st-pdf-stage{background:#171614;border:1px solid #4e4740}
+#stPdfReader .st-pdf-content-grid{align-items:stretch}
+#stPdfReader #stReviewDock{min-width:0;min-height:0}
+#stPdfReader .st-review-pane{min-height:100%;background:#24211e}
+#stPdfReader.st-reader-sidebar-hidden .st-pdf-sidebar{display:none!important}
+#stPdfReader.st-reader-sidebar-hidden .st-pdf-layout{grid-template-columns:minmax(0,1fr)!important}
+#stPdfReader.st-reader-notes-hidden #stReviewDock{display:none!important}
+#stPdfReader.st-reader-notes-hidden .st-pdf-content-grid{grid-template-columns:minmax(0,1fr)!important}
+#stPdfReader .st-reader-panel-toggle[aria-pressed="false"]{background:#282623;color:#bdb5aa}
+#stPdfReader .st-reader-panel-toggle[aria-pressed="true"]{border-color:#d28a4f;color:#ffd2a3;background:#453122}
+#stPdfReader #stPdfFitWidth[aria-pressed="true"]{background:#453122;color:#ffcc9a;border-color:#d28a4f}
+/* Use a fixed app-sized window: mobile Safari does not expose the native Fullscreen API. */
+body.st-document-fullscreen{overflow:hidden!important}
+#stPdfReader.st-reader-fullscreen{
+ position:fixed!important;inset:0!important;z-index:1200!important;
+ height:100dvh!important;min-height:0!important;width:100vw!important;max-width:none!important;
+ margin:0!important;padding:clamp(10px,1.2vw,18px)!important;border-radius:0!important;
+ display:flex!important;flex-direction:column!important;gap:7px;overflow:hidden!important;
+ background:#151514!important;box-shadow:none!important;
+}
+#stPdfReader.st-reader-fullscreen>.title-row{margin:0;padding:0 2px 6px;border-bottom:1px solid #4d443a;flex:0 0 auto}
+#stPdfReader.st-reader-fullscreen>.title-row h2{font-size:clamp(14px,1.05vw,19px)}
+#stPdfReader.st-reader-fullscreen>.title-row .sub{display:none}
+#stPdfReader.st-reader-fullscreen>.st-pdf-toolbar{flex:0 0 auto;padding:0;min-height:46px}
+#stPdfReader.st-reader-fullscreen>#stPdfMessage{flex:0 0 auto;max-height:2.6em;overflow:hidden;margin:1px 0 2px}
+#stPdfReader.st-reader-fullscreen #stPdfWorkspace{
+ display:grid!important;grid-template-columns:minmax(205px,255px) minmax(0,1fr)!important;
+ flex:1 1 auto!important;min-height:0!important;overflow:hidden!important;gap:12px;margin:0!important;
+}
+#stPdfReader.st-reader-fullscreen.st-reader-sidebar-hidden #stPdfWorkspace{grid-template-columns:minmax(0,1fr)!important}
+#stPdfReader.st-reader-fullscreen .st-pdf-sidebar{height:100%;min-height:0;max-height:none;overflow:auto;padding:12px}
+#stPdfReader.st-reader-fullscreen .st-pdf-outline{max-height:min(36dvh,480px)}
+#stPdfReader.st-reader-fullscreen .st-pdf-main{min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+#stPdfReader.st-reader-fullscreen .st-pdf-controls{flex:0 0 auto}
+#stPdfReader.st-reader-fullscreen #stCloudNotesStatus{margin:3px 0;flex:0 0 auto;font-size:12px}
+#stPdfReader.st-reader-fullscreen .st-annotation-controls{flex:0 0 auto;margin:4px 0 9px;padding-bottom:8px;border-bottom:1px solid #484139}
+#stPdfReader.st-reader-fullscreen .st-pdf-bookmarks{flex:0 0 auto;max-height:65px;overflow-y:auto;margin:1px 0 8px}
+#stPdfReader.st-reader-fullscreen .st-pdf-content-grid{
+ display:grid!important;grid-template-columns:minmax(0,1fr) minmax(255px,315px);
+ flex:1 1 auto!important;min-height:0!important;gap:12px;align-items:stretch;
+}
+#stPdfReader.st-reader-fullscreen.st-reader-notes-hidden .st-pdf-content-grid{grid-template-columns:minmax(0,1fr)!important}
+#stPdfReader.st-reader-fullscreen .st-pdf-stage{height:100%;max-height:none;overflow:auto;padding:16px}
+#stPdfReader.st-reader-fullscreen #stReviewDock{min-height:0;max-height:none;overflow:auto}
+#stPdfReader.st-reader-fullscreen .st-review-pane{height:100%;max-height:none;overflow:auto}
+#stPdfReader.st-reader-fullscreen .st-pdf-page{margin:0 auto}
+@media(max-width:1050px){
+ #stPdfReader.st-reader-fullscreen #stPdfWorkspace{grid-template-columns:minmax(175px,220px) minmax(0,1fr)!important}
+ #stPdfReader.st-reader-fullscreen .st-pdf-content-grid{grid-template-columns:minmax(0,1fr) minmax(210px,255px)}
+ #stPdfReader.st-reader-fullscreen.st-reader-sidebar-hidden #stPdfWorkspace{grid-template-columns:minmax(0,1fr)!important}
+}
+@media(max-width:720px){
+ #stPdfReader.st-reader-fullscreen{padding:8px!important;gap:5px}
+ #stPdfReader.st-reader-fullscreen .st-pdf-toolbar{gap:6px}
+ #stPdfReader.st-reader-fullscreen .st-pdf-toolbar #stPdfFileLabel{flex:1 1 120px;font-size:11px;max-height:31px;overflow:hidden}
+ #stPdfReader.st-reader-fullscreen>#stPdfMessage{display:none}
+ #stPdfReader.st-reader-fullscreen #stPdfWorkspace{grid-template-columns:minmax(0,1fr)!important}
+ #stPdfReader.st-reader-fullscreen .st-pdf-sidebar{
+  position:absolute;top:113px;left:8px;bottom:8px;z-index:2;width:min(85vw,295px);
+  height:auto;max-height:calc(100dvh - 121px);background:#24221f;
+  box-shadow:8px 0 20px #0009;border-color:#846449;
+ }
+ #stPdfReader.st-reader-fullscreen.st-reader-sidebar-hidden .st-pdf-sidebar{display:none!important}
+ #stPdfReader.st-reader-fullscreen .st-pdf-controls{gap:5px}
+ #stPdfReader.st-reader-fullscreen .st-pdf-controls button{padding:8px 9px;font-size:12px;min-width:33px;min-height:36px}
+ #stPdfReader.st-reader-fullscreen .st-annotation-controls{max-height:105px;overflow-y:auto;padding:4px 0}
+ #stPdfReader.st-reader-fullscreen .st-pdf-content-grid{grid-template-columns:minmax(0,1fr)!important;position:relative}
+ #stPdfReader.st-reader-fullscreen .st-pdf-stage{padding:8px}
+ #stPdfReader.st-reader-fullscreen #stReviewDock{
+  position:absolute;z-index:3;top:0;right:0;bottom:0;
+  width:min(87vw,360px);background:#24221f;box-shadow:-8px 0 20px #0009;
+  border:1px solid #765c45;border-radius:12px
+ }
+ #stPdfReader.st-reader-fullscreen .st-review-pane{max-height:none}
+}
+@media(prefers-reduced-motion:reduce){#stPdfReader *{scroll-behavior:auto}}
