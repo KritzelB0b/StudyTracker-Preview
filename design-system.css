@@ -9,7 +9,7 @@
 }
 html{background:var(--st-bg);scroll-behavior:smooth}
 body{background:var(--st-bg);color:var(--st-text);-webkit-font-smoothing:antialiased}
-.shell{max-width:1540px;padding:clamp(18px,2.4vw,34px) clamp(14px,2.3vw,34px) 92px}
+.shell{width:100%;max-width:2400px;padding:clamp(18px,2.2vw,40px) clamp(16px,2.6vw,56px) 92px}
 .top{gap:16px;flex-wrap:wrap;align-items:center}
 .brand{min-width:0}.brand h1{letter-spacing:-.025em;line-height:1.2}
 .eyebrow,.sub,.muted,.small{color:var(--st-muted)}
