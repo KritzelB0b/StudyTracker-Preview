@@ -149,3 +149,74 @@ select,textarea{
  .st-dialog-actions button{flex:1;min-width:110px}
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+
+/* Wide desktop layout. Keep the original responsive stack on tablets and phones. */
+@media(min-width:1280px){
+ .shell{max-width:2400px;width:100%;padding-left:clamp(22px,2.5vw,60px);padding-right:clamp(22px,2.5vw,60px)}
+ #dashboard>.stack{gap:clamp(16px,1.3vw,28px)}
+ #dashboard .main{grid-template-columns:minmax(0,1.75fr) minmax(340px,.95fr);gap:clamp(18px,1.35vw,30px);align-items:start}
+ #dashboard .main>.stack{gap:clamp(17px,1.25vw,26px)}
+ #dashboard .grid3{gap:clamp(12px,1vw,22px)}
+ #dashboard .grid3 .metric{padding:clamp(18px,1.5vw,27px)}
+ #dashboard .grid3 .metric .num{font-size:clamp(29px,2.2vw,43px)}
+ #dashboard .chart{height:215px;gap:12px}
+ #dashboard .chart-bar-container{height:174px}
+ #dashboard .chart-bar{max-width:88px}
+ #dashboard .card{padding:clamp(19px,1.45vw,29px)}
+ #dashboard #moduleOverview,#dashboard #goalOverview{min-height:0}
+ #dashboard .module-row{padding-block:15px}
+ #dashboard .goal{margin-bottom:19px}
+}
+@media(min-width:1600px){
+ #dashboard .main>.stack:first-child>.card:first-child{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"heading heading" "selection formtitle" "stopwatch form";align-content:start;align-items:start;column-gap:clamp(22px,2vw,42px);row-gap:14px}
+ #dashboard .main>.stack:first-child>.card:first-child>.title-row{grid-area:heading}
+ #dashboard .main>.stack:first-child>.card:first-child>.two{grid-area:selection}
+ #dashboard .main>.stack:first-child>.card:first-child>.timer{grid-area:stopwatch;padding:12px 0 0}
+ #dashboard .main>.stack:first-child>.card:first-child>.divider{display:none}
+ #dashboard .main>.stack:first-child>.card:first-child>.section-label{grid-area:formtitle;padding-block:10px 0}
+ #dashboard .main>.stack:first-child>.card:first-child>#manualForm{grid-area:form;align-self:start}
+ #dashboard .main>.stack:first-child>.card:first-child>#manualForm .three{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #dashboard .main>.stack:first-child>.card:first-child>#manualForm .three>.field:last-child{grid-column:1/-1}
+ #dashboard .main>.stack:first-child>.card:first-child>#manualForm .two{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #dashboard .main>.stack:first-child>.card:first-child .clock{font-size:clamp(45px,3.4vw,65px)}
+}
+@media(min-width:2000px){
+ #dashboard .main>.stack:first-child>.card:first-child>#manualForm .three{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #dashboard .main>.stack:first-child>.card:first-child>#manualForm .three>.field:last-child{grid-column:auto}
+}
+@media(min-width:1280px) and (max-width:1599px){
+ #dashboard .main>.stack:first-child>.card:first-child .timer{padding-block:23px}
+}
+@media(max-width:1279px){
+ #dashboard .main{grid-template-columns:minmax(0,1.4fr) minmax(295px,1fr)}
+}
+@media(max-width:900px){
+ #dashboard .main{grid-template-columns:1fr}
+}
+.footer{color:#bcb1a4;max-width:none;margin-top:clamp(28px,2.2vw,48px);border-top:1px solid #403c36;padding:18px 4px 0;text-align:center}
+.topic,.detail-card,.detail-topic{border-color:var(--st-border)}
+.topic-indent,.detail-child{border-left-color:#bd834f}
+.muted-link{color:#ffbf84}
+.inline-note{background:#382c21;border:1px solid #68513c;color:#f1d0a4}
+.stats-table th{color:#d5c7b6;border-color:#60554a}
+.stats-table td,.sem-table td,.sem-table th,.taskrow,.practice-files{border-color:#51483e}
+.chip{background:#4c3626;color:#ffd4a7}
+.scroll-section{scrollbar-color:#8e745c #201e1b}
+.sem-day{border-color:#625649;background:#302c27}
+.sem-day.focus{border-color:#e97812;background:#4a3422;box-shadow:inset 0 0 0 1px #ab6d30}
+.sem-tag{background:#47372a}
+.sem-event{border-color:#52483c}
+.planweek .planday{background:#2c2a27;border-color:#5b5145}
+.planweek .planitem:not([class*="ev-"]):not(.learn):not(.exam):not(.task){background:#45362a}
+.statsmini>div{background:#353029;border:1px solid #574d42}
+#publicView .readonly-note{color:#c9bdb1}
+#publicView .reader-day{border-color:#605449}
+#publicView .event-block{background:#443326}
+#publicView .progress{background:#25221f}
+#focusOverlay.focus-overlay{background:#10100f}
+#focusOverlay .focus-head{border-color:#544d43}
+/* Calendar category hues remain distinct for meaning, but lectures use the shared accent. */
+.ev-lecture{color:#ffdfb8;background:#4d3121!important}
+.sem-event[class*="ev-"]{background:#363029}
+/* Footer and link colors remain readable on dark surfaces. */
+a:not(.primary):not(.secondary):not(.tab){accent-color:var(--st-orange)}
