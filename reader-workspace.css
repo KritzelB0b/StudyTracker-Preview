@@ -86,3 +86,106 @@ body.st-document-fullscreen{overflow:hidden!important}
  #stPdfReader.st-reader-fullscreen .st-review-pane{max-height:none}
 }
 @media(prefers-reduced-motion:reduce){#stPdfReader *{scroll-behavior:auto}}
+
+/* Acrobat-inspired annotation strip: separated groups, real modes and compact controls. */
+#stPdfReader .st-annotation-controls.st-acrobat-toolbar{
+ display:flex;align-items:stretch;gap:0;flex-wrap:wrap;
+ padding:7px 10px;margin:8px 0 3px;
+ border:1px solid #625345;border-radius:13px;
+ background:linear-gradient(180deg,#31302c 0%,#252421 100%);
+ box-shadow:inset 0 1px 0 #ffffff0a;overflow:visible;
+}
+#stPdfReader .st-tool-group{
+ display:flex;flex-direction:column;justify-content:flex-start;min-width:0;
+ gap:6px;padding:5px 13px;border-right:1px solid #61574c;
+}
+#stPdfReader .st-tool-group:last-child{border-right:0}
+#stPdfReader .st-tool-label{
+ color:#c2b5a5;font-size:10px;letter-spacing:.065em;
+ font-weight:700;text-transform:uppercase;white-space:nowrap;
+ line-height:14px;
+}
+#stPdfReader .st-tool-row{display:flex;align-items:center;gap:4px;min-height:41px}
+#stPdfReader .st-acrobat-tool{
+ display:flex;align-items:center;justify-content:center;gap:6px;
+ min-height:39px;min-width:39px;border-radius:9px;padding:7px 10px;
+ font:600 12px/1.2 inherit;white-space:nowrap;
+ color:#efe5d8;background:transparent;border:1px solid transparent;
+ transition:background .14s,border-color .14s,color .14s;
+ touch-action:manipulation;
+}
+#stPdfReader .st-acrobat-tool:hover:not(:disabled){background:#484037;border-color:#6d5f50}
+#stPdfReader .st-acrobat-tool[aria-pressed="true"]{
+ background:#f18a25;color:#1c1208;border-color:#ffac58;
+ box-shadow:inset 0 1px 0 #ffffff55;
+}
+#stPdfReader .st-acrobat-tool:disabled{color:#746f68;cursor:not-allowed}
+#stPdfReader .st-tool-icon{width:18px;height:18px;display:block;flex-shrink:0}
+#stPdfReader .st-tool-colors{display:flex;align-items:center;gap:6px;min-height:41px}
+#stPdfReader .st-color-swatch{
+ position:relative;width:23px;height:23px;min-width:23px;min-height:23px;
+ padding:0;border-radius:50%;background:var(--swatch);
+ border:1.5px solid #afa39a;cursor:pointer;
+ box-shadow:0 1px 3px #000a;
+}
+#stPdfReader .st-color-swatch:hover{transform:scale(1.1)}
+#stPdfReader .st-color-swatch.is-selected{outline:2px solid #f18a25;outline-offset:3px}
+#stPdfReader .st-color-swatch[data-ink-color="#000000"]{border-color:#cbc6be}
+#stPdfReader .st-tool-visually-hidden{
+ position:absolute!important;width:1px!important;height:1px!important;
+ margin:-1px!important;border:0!important;padding:0!important;
+ overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;
+}
+#stPdfReader .st-tool-thickness select{
+ color:#efe4d8;background:#24221e;border:1px solid #776755;
+ border-radius:8px;padding:6px 11px;min-height:38px;
+ font-size:12px;max-width:105px;cursor:pointer;
+}
+#stPdfReader .st-tool-status{
+ font-size:12px;line-height:1.35;color:#decab5;
+ margin:0 0 8px;padding-left:6px;overflow-wrap:anywhere;
+}
+#stPdfReader .st-pdf-stage.st-mode-hand{cursor:grab}
+#stPdfReader .st-pdf-stage.st-mode-hand.st-hand-grabbing{cursor:grabbing}
+#stPdfReader .st-pdf-ink.st-draw-active{cursor:crosshair}
+#stPdfReader .st-pdf-ink.st-eraser-active{cursor:cell}
+.st-jump-dialog{width:min(92vw,420px);padding:22px;background:#282521;border:1px solid #8a6749;color:#f5ede4;border-radius:15px;box-shadow:0 25px 70px #000a}
+.st-jump-dialog::backdrop{background:#000b;backdrop-filter:blur(3px)}
+.st-jump-dialog form{display:grid;gap:11px}
+.st-jump-dialog h3{margin:0 0 6px;font-size:18px}
+.st-jump-dialog label{font-size:12px;font-weight:700;color:#dbc8b3}
+.st-jump-dialog input{width:100%;padding:12px;min-height:43px;border-radius:9px;border:1px solid #7a6957;background:#151514;color:#fff}
+.st-jump-dialog .st-jump-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:9px}
+.st-jump-dialog .st-jump-actions button{min-height:42px}
+.st-jump-dialog .st-jump-error{min-height:0;color:#fbb0a8;font-size:12px;margin:0}
+.st-jump-dialog .st-jump-error:empty{display:none}
+#stPdfReader.st-reader-fullscreen .st-annotation-controls.st-acrobat-toolbar{
+ flex:0 0 auto;margin:3px 0 4px;max-height:min(132px,23dvh);
+ overflow-x:auto;overflow-y:auto;scrollbar-width:thin;
+ padding:5px 7px;
+}
+#stPdfReader.st-reader-fullscreen .st-tool-status{margin:0 0 3px;flex:0 0 auto}
+#stPdfReader.st-reader-fullscreen .st-tool-group{padding:4px 10px}
+@media(max-width:1000px){
+ #stPdfReader .st-acrobat-tool span{display:none}
+ #stPdfReader .st-acrobat-tool{width:42px;height:42px;padding:9px}
+ #stPdfReader .st-tool-group{padding:5px 9px}
+ #stPdfReader .st-tool-colors{gap:5px}
+ #stPdfReader .st-color-swatch{width:21px;height:21px;min-width:21px;min-height:21px}
+}
+@media(max-width:720px){
+ #stPdfReader .st-annotation-controls.st-acrobat-toolbar{
+  display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
+  scrollbar-width:thin;gap:0;padding:6px;
+ }
+ #stPdfReader .st-tool-group{flex:0 0 auto;gap:4px;padding:3px 10px}
+ #stPdfReader .st-acrobat-tool{height:42px;width:42px}
+ #stPdfReader .st-tool-label{font-size:9px}
+ #stPdfReader .st-color-swatch{width:24px;height:24px;min-width:24px;min-height:24px}
+ #stPdfReader.st-reader-fullscreen .st-annotation-controls.st-acrobat-toolbar{max-height:93px;overflow-y:hidden}
+ #stPdfReader .st-tool-status{font-size:11px}
+ .st-jump-dialog{padding:17px}
+ .st-jump-dialog .st-jump-actions button{flex:1 1 auto}
+}
+@media(prefers-reduced-motion:reduce){#stPdfReader .st-acrobat-tool{transition:none}}
