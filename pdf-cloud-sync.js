@@ -1,4 +1,4 @@
-import {setCloudBookmarks} from './pdf-reader.js';
+import {setCloudBookmarks} from './pdf-reader.js?v=6';
 const API='https://studytracker-privatefiles-api-test.up.railway.app';
 const token=()=>sessionStorage.getItem('studytracker_test_cloud_token')||'';
 const status=s=>{const el=document.getElementById('stCloudNotesStatus');if(el)el.textContent=s};
