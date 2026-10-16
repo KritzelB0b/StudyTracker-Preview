@@ -6,7 +6,7 @@ if(!ctx)throw new Error('Canvas-Zeichenfläche ist nicht verfügbar');
 let key='',page=1,pen=false,drawing=false,activeStroke=[],data={pages:{}};let inkColor='#000000',inkWidth=3;
 const scale=()=>Math.min(window.devicePixelRatio||1,2);
 const current=()=>data.pages[page]??(data.pages[page]={strokes:[],notes:[],links:[]});
-const save=()=>{if(!key)return;try{localStorage.setItem('st-reader-annotations-v1-'+key,JSON.stringify(data))}catch{status('Speicher voll: Bitte ältere Einträge sichern.')}};
+const save=()=>{if(!key)return;try{localStorage.setItem('st-reader-annotations-v1-'+key,JSON.stringify(data))}catch{status('Speicher voll: Bitte ältere Einträge sichern.')}document.dispatchEvent(new CustomEvent('st-pdf-annotation-change',{detail:{key,data:structuredClone(data)}}))};
 const status=s=>el('stPdfMessage').textContent=s;
 function list(){const root=el('stAnnotList');root.replaceChildren();el('stReviewPage').textContent='Seite '+page;if(!key)return;const p=current();
  if(!p.notes.length&&!p.links.length){const empty=document.createElement('div');empty.className='st-review-empty';empty.textContent='Noch keine Kommentare oder Sprungmarken auf dieser Seite.';root.append(empty)}
@@ -31,6 +31,7 @@ el('stAnnotUndo').onclick=()=>{if(!key)return;current().strokes.pop();save();red
 el('stAnnotErase').onclick=()=>{if(!key||!confirm('Alle handschriftlichen Striche auf dieser Seite löschen?'))return;current().strokes=[];save();redraw()};
 document.addEventListener('st-pdf-open',e=>{key=e.detail.key;try{data=JSON.parse(localStorage.getItem('st-reader-annotations-v1-'+key)||'{"pages":{}}');if(!data.pages||typeof data.pages!=='object')data={pages:{}}}catch{data={pages:{}}}page=1;list()});
 document.addEventListener('st-pdf-page',e=>{page=e.detail.page;el('stReviewInput').value='';const ratio=Math.min(devicePixelRatio||1,2);ink.width=Math.floor(e.detail.width*ratio);ink.height=Math.floor(e.detail.height*ratio);ink.style.width=e.detail.width+'px';ink.style.height=e.detail.height+'px';redraw();list()});
+document.addEventListener('st-pdf-cloud-loaded',e=>{if(e.detail.key!==key)return;data=e.detail.data;try{localStorage.setItem('st-reader-annotations-v1-'+key,JSON.stringify(data))}catch{}redraw();list()});
 document.addEventListener('st-pdf-close',()=>{key='';pen=false;el('stReviewInput').value='';ink.classList.remove('st-draw-active');el('stAnnotPen').setAttribute('aria-pressed','false');ctx.clearRect(0,0,ink.width,ink.height);el('stAnnotList').replaceChildren()});
 
 window.studyPdfAnnotationsReady=true;
