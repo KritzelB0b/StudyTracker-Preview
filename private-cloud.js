@@ -83,13 +83,13 @@ function folderDescendants(id){
 function openAction(action,item){
  if(!enabled())return notice('Bitte anmelden.');
  dialogAction={action,item};
- const rename=action.startsWith('rename'),isFile=action.endsWith('File'),dlg=$('cloudActionDialog');
+ const creating=action==='createFolder',rename=action.startsWith('rename')||creating,isFile=action.endsWith('File'),dlg=$('cloudActionDialog');
  $('cloudActionError').textContent='';
  $('cloudActionInputWrap').hidden=!rename;$('cloudActionSelectWrap').hidden=rename;
  $('cloudActionName').required=rename;
- $('cloudActionTitle').textContent=(rename?'Umbenennen':'Verschieben')+' · '+(isFile?'Datei':'Ordner');
- $('cloudActionSave').textContent=rename?'Umbenennen':'Verschieben';
- const name=isFile?item.filename:item.name;
+ $('cloudActionTitle').textContent=creating?'Neuen Ordner anlegen':(rename?'Umbenennen':'Verschieben')+' · '+(isFile?'Datei':'Ordner');
+ $('cloudActionSave').textContent=creating?'Ordner anlegen':rename?'Umbenennen':'Verschieben';
+ const name=creating?'':isFile?item.filename:item.name;
  if(rename){
   const extension=isFile?name.slice(name.lastIndexOf('.')):'';
   $('cloudActionName').value=extension?name.slice(0,-extension.length):name;
@@ -106,34 +106,30 @@ function openAction(action,item){
  if(rename)$('cloudActionName').focus();else $('cloudActionDestination').focus();
 }
 $('cloudActionCancel').addEventListener('click',()=>$('cloudActionDialog').close());
+$('cloudActionBack').addEventListener('click',()=>$('cloudActionDialog').close());
 $('cloudActionForm').addEventListener('submit',async event=>{
  event.preventDefault();if(!dialogAction)return;
- const {action,item}=dialogAction,rename=action.startsWith('rename'),isFile=action.endsWith('File');
- const path='/private/'+(isFile?'documents/':'folders/')+encodeURIComponent(item.id),payload={};
+ const {action,item}=dialogAction,creating=action==='createFolder',rename=action.startsWith('rename')||creating,isFile=action.endsWith('File');
+ const path=creating?'/private/folders':'/private/'+(isFile?'documents/':'folders/')+encodeURIComponent(item.id),payload={};
  if(rename){
   const n=$('cloudActionName').value.trim();
   if(!n){$('cloudActionError').textContent='Bitte einen Namen eingeben.';return}
   const suffix=isFile?item.filename.slice(item.filename.lastIndexOf('.')):'';
   const value=n+suffix;
-  if(value===(isFile?item.filename:item.name)){$('cloudActionDialog').close();return}
+  if(!creating&&value===(isFile?item.filename:item.name)){$('cloudActionDialog').close();return}
   payload[isFile?'filename':'name']=value;
+  if(creating)payload.parent_id=folder;
  }else{
   const dest=$('cloudActionDestination').value||null;
   if(dest===(isFile?item.folder_id:item.parent_id)){$('cloudActionDialog').close();return}
   payload[isFile?'folder_id':'parent_id']=dest;
  }
  const submit=$('cloudActionSave');submit.disabled=true;$('cloudActionError').textContent='';
- try{await jsonRequest(path,'PUT',payload);$('cloudActionDialog').close();await refresh()}
+ try{await jsonRequest(path,creating?'POST':'PUT',payload);$('cloudActionDialog').close();await refresh()}
  catch(e){$('cloudActionError').textContent=e.message}
  finally{submit.disabled=false}
 });
-async function createFolder(){
- if(!enabled())return notice('Bitte anmelden.');
- const name=window.prompt('Name des neuen Ordners:');
- if(!name?.trim())return;
- try{await jsonRequest('/private/folders','POST',{name:name.trim(),parent_id:folder});await refresh()}
- catch(e){notice('Ordner konnte nicht angelegt werden: '+e.message)}
-}
+function createFolder(){if(!enabled())return notice('Bitte anmelden.');openAction('createFolder',null)}
 async function removeFolder(item){
  if(!window.confirm('Leeren Ordner „'+item.name+'“ löschen? Ordner mit Dateien oder Unterordnern bleiben geschützt.'))return;
  try{await request('/private/folders/'+encodeURIComponent(item.id),{method:'DELETE'});if(folder===item.id)folder=null;await refresh()}
