@@ -3,7 +3,7 @@ const el=id=>document.getElementById(id),ink=el('stPdfInk');
 if(!ink)throw new Error('Anmerkungsfläche fehlt');
 const ctx=ink.getContext('2d');
 if(!ctx)throw new Error('Canvas-Zeichenfläche ist nicht verfügbar');
-let key='',page=1,pen=false,drawing=false,activeStroke=[],data={pages:{}};let inkColor='#e66700',inkWidth=3;
+let key='',page=1,pen=false,drawing=false,activeStroke=[],data={pages:{}};let inkColor='#000000',inkWidth=3;
 const scale=()=>Math.min(window.devicePixelRatio||1,2);
 const current=()=>data.pages[page]??(data.pages[page]={strokes:[],notes:[],links:[]});
 const save=()=>{if(!key)return;try{localStorage.setItem('st-reader-annotations-v1-'+key,JSON.stringify(data))}catch{status('Speicher voll: Bitte ältere Einträge sichern.')}};
