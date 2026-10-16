@@ -1,6 +1,6 @@
 'use strict';
 const KEY='studytracker_v1';
-const colors=['#6e9ef6','#e8ac67','#6abeb2','#ac8be8','#e57a9b'];
+const colors=['#e97812','#dba563','#87b4a1','#b09dbe','#d59a89'];
 const defaults=()=>({modules:[{id:'m1',name:'Mathematik',color:colors[0],goal:6},{id:'m2',name:'Technische Mechanik',color:colors[1],goal:5},{id:'m3',name:'Werkstoffkunde',color:colors[2],goal:3},{id:'m4',name:'Konstruktion',color:colors[3],goal:4}],topics:[],entries:[]});
 function readData(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&Array.isArray(d.modules)&&Array.isArray(d.topics)&&Array.isArray(d.entries))return d;}catch(e){}return defaults()}
 let db=readData();const $=id=>document.getElementById(id);const fmt=n=>Number(n).toLocaleString('de-DE',{maximumFractionDigits:1});const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const uid=()=>typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);const getM=id=>db.modules.find(m=>m.id===id);const getT=id=>db.topics.find(t=>t.id===id);const dayKey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;const today=()=>dayKey(new Date());const dateOf=s=>new Date(s+'T12:00:00');const startWeek=()=>{const d=dateOf(today());d.setDate(d.getDate()-(d.getDay()+6)%7);return dayKey(d)};const sum=entries=>entries.reduce((s,e)=>s+e.minutes,0);const hr=min=>fmt(min/60)+' h';
