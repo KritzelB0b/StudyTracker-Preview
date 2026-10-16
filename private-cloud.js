@@ -1,4 +1,4 @@
-import {openCloudPdf} from './pdf-reader.js';
+import {openCloudPdf} from './pdf-reader.js?v=6';
 const API='https://studytracker-privatefiles-api-test.up.railway.app';
 const $=id=>document.getElementById(id);
 const token=()=>sessionStorage.getItem('studytracker_test_cloud_token')||'';
