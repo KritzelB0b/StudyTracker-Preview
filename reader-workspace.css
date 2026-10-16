@@ -109,7 +109,7 @@ body.st-document-fullscreen{overflow:hidden!important}
 #stPdfReader .st-acrobat-tool{
  display:flex;align-items:center;justify-content:center;gap:6px;
  min-height:39px;min-width:39px;border-radius:9px;padding:7px 10px;
- font:600 12px/1.2 inherit;white-space:nowrap;
+ font-size:12px;font-weight:600;line-height:1.2;font-family:inherit;white-space:nowrap;
  color:#efe5d8;background:transparent;border:1px solid transparent;
  transition:background .14s,border-color .14s,color .14s;
  touch-action:manipulation;
