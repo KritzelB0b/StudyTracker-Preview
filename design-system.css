@@ -289,3 +289,10 @@ a:not(.primary):not(.secondary):not(.tab){accent-color:var(--st-orange)}
  .st-cloud-folders .st-folder-name{flex:1}
  .st-floating-file-menu{max-width:calc(100vw - 20px)}
 }
+
+.st-cloud-upload-state{margin:10px 0 5px;max-width:600px}
+.st-cloud-upload-state[hidden]{display:none!important}
+.st-cloud-upload-track{height:11px;background:#1a1816;border-radius:99px;overflow:hidden;border:1px solid #544638}
+.st-cloud-upload-track>div{height:100%;width:0%;background:linear-gradient(90deg,#dc6810,#ffaa4f);border-radius:99px;transition:width .18s}
+#cloudUploadCancel{margin:5px 0 10px;min-height:39px}
+#cloudUploadCancel[hidden]{display:none!important}
