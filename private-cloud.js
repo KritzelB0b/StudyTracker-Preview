@@ -1,7 +1,7 @@
 import {openCloudPdf} from './pdf-reader.js';
-const API='https://studytracker-api-production-7134.up.railway.app';
+const API='https://studytracker-privatefiles-api-test.up.railway.app';
 const $=id=>document.getElementById(id);
-const token=()=>sessionStorage.getItem('studytracker_cloud_token')||'';
+const token=()=>sessionStorage.getItem('studytracker_test_cloud_token')||'';
 const enabled=()=>!document.body.classList.contains('st-auth-locked')&&!!token();
 let folder=null,folders=[],files=[];
 const notice=s=>$('cloudFilesStatus').textContent=s;
@@ -48,5 +48,7 @@ async function getFile(f){return (await request('/private/documents/'+encodeURIC
 async function openPdf(f){try{notice('PDF wird privat geladen …');const blob=await getFile(f);await openCloudPdf(new File([blob],f.filename,{type:'application/pdf'}));notice('PDF im Reader geöffnet.')}catch(e){notice(e.message)}}
 async function download(f){try{const blob=await getFile(f);const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=f.filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),10000)}catch(e){notice(e.message)}}
 async function removeFile(f){if(!confirm('„'+f.filename+'“ dauerhaft aus dem privaten Cloud-Speicher löschen?'))return;try{await request('/private/documents/'+encodeURIComponent(f.id),{method:'DELETE'});await refresh()}catch(e){notice(e.message)}}
+async function testLogin(mode){const password=$('cloudTestPassword').value;if(password.length<12)return notice('Testpasswort benötigt mindestens 12 Zeichen.');try{const res=await fetch(API+'/auth/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'studytracker-test@example.com',password})});if(!res.ok){const e=await res.json();throw Error(typeof e.detail==='string'?e.detail:'HTTP '+res.status)}const d=await res.json();sessionStorage.setItem('studytracker_test_cloud_token',d.token);$('cloudTestPassword').value='';await refresh()}catch(e){notice(e.message)}}
+$('cloudTestRegister').onclick=()=>testLogin('register');$('cloudTestLogin').onclick=()=>testLogin('login');
 $('cloudFolderCreate').onclick=createFolder;$('cloudFileUpload').onclick=upload;$('cloudFilesReload').onclick=refresh;
 document.querySelector('[data-tab="files"]').addEventListener('click',()=>{if(enabled())refresh()});
