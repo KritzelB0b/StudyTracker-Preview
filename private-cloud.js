@@ -37,14 +37,67 @@ async function refresh(){
   paint();await showStorage();notice('Cloud-Dateispeicher verbunden · '+nameFor(folder));
  }catch(error){notice('Dateien konnten nicht geladen werden: '+error.message)}
 }
+let floatingMenu=null,menuAnchor=null;
+function closeActionMenu(returnFocus=false){
+ const anchor=menuAnchor;
+ if(anchor)anchor.setAttribute('aria-expanded','false');
+ floatingMenu?.remove();
+ floatingMenu=null;menuAnchor=null;
+ if(returnFocus&&anchor?.isConnected)anchor.focus();
+}
+function openActionMenu(trigger,actions,label){
+ if(menuAnchor===trigger){closeActionMenu();return}
+ closeActionMenu();
+ const menu=document.createElement('div');
+ menu.className='st-floating-file-menu';
+ menu.setAttribute('role','menu');menu.setAttribute('aria-label',label);
+ const popupWidth=Math.min(224,window.innerWidth-24);
+ menu.style.width=popupWidth+'px';
+ for(const [action,handler] of actions){
+  const choice=button(action,()=>{closeActionMenu();handler()});
+  choice.setAttribute('role','menuitem');
+  choice.classList.add('st-floating-file-option');
+  if(/löschen/i.test(action))choice.classList.add('st-option-danger');
+  menu.append(choice);
+ }
+ document.body.append(menu);
+ floatingMenu=menu;menuAnchor=trigger;
+ trigger.setAttribute('aria-expanded','true');
+ const rect=trigger.getBoundingClientRect(),spaceBelow=window.innerHeight-rect.bottom;
+ const height=menu.getBoundingClientRect().height;
+ const alignNextTo=trigger.closest('.st-folder-row')!==null&&rect.right+popupWidth+10<window.innerWidth-10;
+ const left=alignNextTo?rect.right+9:rect.right-popupWidth;
+ menu.style.left=Math.round(Math.max(10,Math.min(left,window.innerWidth-popupWidth-10)))+'px';
+ const below=rect.bottom+7,above=rect.top-height-7;
+ menu.style.top=Math.round(Math.max(8,Math.min(spaceBelow>=height+15?below:above,window.innerHeight-height-8)))+'px';
+ menu.querySelector('button')?.focus();
+}
+document.addEventListener('pointerdown',event=>{
+ if(floatingMenu&&!floatingMenu.contains(event.target)&&!menuAnchor?.contains(event.target))closeActionMenu();
+},true);
+document.addEventListener('keydown',event=>{
+ if(!floatingMenu)return;
+ if(event.key==='Escape'){event.preventDefault();closeActionMenu(true);return}
+ if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return;
+ event.preventDefault();
+ const all=[...floatingMenu.querySelectorAll('button')];
+ const index=all.indexOf(document.activeElement);
+ const next=event.key==='Home'?0:event.key==='End'?all.length-1:event.key==='ArrowDown'?(index+1)%all.length:(index+all.length-1)%all.length;
+ all[next]?.focus();
+});
+window.addEventListener('scroll',()=>closeActionMenu(),true);
+window.addEventListener('resize',()=>closeActionMenu());
 function moreMenu(actions,label){
- const details=document.createElement('details');details.className='st-file-more';
- const summary=document.createElement('summary');summary.textContent='⋯';summary.title=label;summary.setAttribute('aria-label',label);
- const menu=document.createElement('div');menu.className='st-file-menu';
- for(const [text,handler] of actions)menu.append(button(text,()=>{details.open=false;handler()}));
- details.append(summary,menu);return details;
+ const trigger=button('⋯',()=>openActionMenu(trigger,actions,label));
+ trigger.className='st-menu-trigger';
+ trigger.title=label;
+ trigger.setAttribute('aria-label',label);
+ trigger.setAttribute('aria-haspopup','menu');
+ trigger.setAttribute('aria-expanded','false');
+ return trigger;
 }
 function paint(){
+ closeActionMenu();
  const roots=$('cloudFolderTree'),list=$('cloudFileList');roots.replaceChildren();list.replaceChildren();
  $('cloudCurrentPath').textContent=fullPath(folder);
  const root=document.createElement('div');root.className='st-folder-row';
