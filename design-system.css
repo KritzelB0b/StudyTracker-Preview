@@ -220,3 +220,52 @@ select,textarea{
 .sem-event[class*="ev-"]{background:#363029}
 /* Footer and link colors remain readable on dark surfaces. */
 a:not(.primary):not(.secondary):not(.tab){accent-color:var(--st-orange)}
+
+/* Public visitor layout uses the same responsive dashboard language as the owner. */
+#publicView{width:100%;min-width:0}
+#publicView .st-public-dashboard,#publicView .st-public-history{min-width:0;gap:clamp(16px,1.3vw,27px)}
+#publicView .st-public-dashboard>.grid3{gap:clamp(12px,1vw,22px)}
+#publicView .st-public-dashboard>.grid3 .metric{padding:clamp(18px,1.45vw,27px)}
+#publicView .st-public-dashboard>.grid3 .metric .num{font-size:clamp(28px,2.15vw,43px)}
+#publicView .st-public-dashboard>.main{align-items:start;gap:clamp(17px,1.35vw,30px)}
+#publicView .st-public-dashboard .main>.stack{gap:clamp(17px,1.3vw,26px)}
+#publicView .st-public-dashboard .main .card{min-width:0}
+#publicView .st-public-chart-card{overflow:hidden}
+#publicView .st-public-chart-card .st-public-semiring{padding:0;border:0;background:transparent;margin:0}
+#publicView .st-public-semiring .st-history-viz-layout{grid-template-columns:minmax(190px,1fr) minmax(180px,1fr);gap:clamp(12px,1.25vw,25px);margin-top:20px}
+#publicView .st-public-semiring svg{width:min(100%,390px);height:auto}
+#publicView .st-public-semiring .st-history-legend{max-height:270px}
+#publicView .st-public-dashboard .chart{height:215px}
+#publicView .st-public-dashboard .chart-bar-container{height:170px}
+#publicView .st-public-dashboard .chart-bar{max-width:82px}
+#publicView .st-public-history-columns{display:grid;grid-template-columns:minmax(290px,.85fr) minmax(0,1.15fr);gap:clamp(14px,1.3vw,26px);align-items:start}
+#publicView .st-public-history-columns>.card{min-width:0;height:100%}
+#publicView .st-public-history .scroll-box{max-height:350px;overflow-y:auto}
+#publicView .st-public-dashboard .statsmini{grid-template-columns:repeat(3,minmax(0,1fr))}
+#publicView .st-public-dashboard .statsmini strong{display:block;margin-top:8px;font-size:clamp(15px,1.35vw,20px);font-variant-numeric:tabular-nums}
+#publicView .st-public-dashboard .goal-head{line-height:1.45}
+#publicView .st-public-dashboard .module-row{padding-block:13px}
+#publicView .st-public-dashboard .st-history-viz-head h3{font-size:18px}
+@media(min-width:1600px){
+ #publicView .st-public-dashboard>.main{grid-template-columns:minmax(0,1.65fr) minmax(340px,.95fr)}
+ #publicView .st-public-chart-card .st-public-semiring .st-history-viz-layout{grid-template-columns:minmax(245px,1fr) minmax(210px,1fr)}
+}
+@media(max-width:1100px){
+ #publicView .st-public-chart-card .st-public-semiring .st-history-viz-layout{grid-template-columns:1fr;gap:2px}
+ #publicView .st-public-chart-card .st-history-legend{max-height:200px}
+}
+@media(max-width:900px){
+ #publicView .st-public-dashboard>.main{grid-template-columns:1fr}
+ #publicView .st-public-chart-card .st-public-semiring .st-history-viz-layout{grid-template-columns:minmax(0,1fr) minmax(210px,1fr)}
+ #publicView .st-public-history-columns{grid-template-columns:1fr}
+}
+@media(max-width:650px){
+ #publicView .st-public-dashboard>.grid3{grid-template-columns:1fr}
+ #publicView .st-public-dashboard>.grid3 .metric{min-width:0}
+ #publicView .st-public-chart-card .st-public-semiring .st-history-viz-layout{grid-template-columns:1fr}
+ #publicView .st-public-semiring svg{max-width:330px}
+ #publicView .st-public-dashboard .chart{height:175px;gap:5px}
+ #publicView .st-public-dashboard .chart-bar-container{height:135px}
+ #publicView .st-public-dashboard .statsmini{grid-template-columns:1fr}
+ #publicView .st-history-legend-row{gap:8px;font-size:12px}
+}
