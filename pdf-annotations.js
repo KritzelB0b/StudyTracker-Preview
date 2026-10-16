@@ -31,11 +31,11 @@ function save(){
  if(!key)return;
  try{localStorage.setItem('st-reader-annotations-v1-'+key,JSON.stringify(data))}
  catch{status('Lokaler Speicher voll. Bitte ältere Einträge sichern.')}
- document.dispatchEvent(new CustomEvent('st-pdf-annotation-change',{detail:{key,data:structuredClone(data)}}));
+ document.dispatchEvent(new CustomEvent('st-pdf-annotation-change',{detail:{key,data:JSON.parse(JSON.stringify(data))}}));
 }
 function backupStrokes(){
  const old=strokeHistory.get(page)||[];
- old.push(structuredClone(current().strokes));
+ old.push(JSON.parse(JSON.stringify(current().strokes)));
  if(old.length>historyLimit)old.shift();
  strokeHistory.set(page,old);
  el('stAnnotUndo').disabled=false;
