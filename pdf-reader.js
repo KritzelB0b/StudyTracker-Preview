@@ -1,7 +1,7 @@
 
 const g=id=>document.getElementById(id);
 const input=g('stPdfInput'), workspace=g('stPdfWorkspace'),msg=g('stPdfMessage'),canvas=g('stPdfCanvas'),layer=g('stPdfLinkLayer');
-let pdfjs=null,documentPDF=null,renderTask=null,renderVersion=0,current=1,zoom=1,outline=[],bookmarks=[],docKey='',searchVersion=0;
+let cloudDocumentId=null;let pdfjs=null,documentPDF=null,renderTask=null,renderVersion=0,current=1,zoom=1,outline=[],bookmarks=[],docKey='',searchVersion=0;
 const report=s=>msg.textContent=s;
 const isOwner=()=>!document.body.classList.contains('st-auth-locked');
 async function engine(){
@@ -14,7 +14,7 @@ function clearDocument(){
  searchVersion++;renderVersion++;
  if(renderTask){try{renderTask.cancel()}catch{}renderTask=null}
  if(documentPDF){documentPDF.destroy().catch(()=>{});documentPDF=null}
- document.dispatchEvent(new Event('st-pdf-close'));current=1;zoom=1;outline=[];bookmarks=[];docKey='';workspace.hidden=true;layer.replaceChildren();g('stPdfOutline').replaceChildren();g('stPdfResults').replaceChildren();g('stPdfBookmarks').replaceChildren();g('stPdfFileLabel').textContent='Noch kein Dokument ausgewählt';g('stPdfClose').disabled=true;input.value='';
+ document.dispatchEvent(new Event('st-pdf-close'));cloudDocumentId=null;current=1;zoom=1;outline=[];bookmarks=[];docKey='';workspace.hidden=true;layer.replaceChildren();g('stPdfOutline').replaceChildren();g('stPdfResults').replaceChildren();g('stPdfBookmarks').replaceChildren();g('stPdfFileLabel').textContent='Noch kein Dokument ausgewählt';g('stPdfClose').disabled=true;input.value='';
 }
 function leaf(text,depth,fn){
  const b=document.createElement('button');b.type='button';b.textContent=text;b.style.paddingLeft=(8+Math.min(depth,7)*15)+'px';b.addEventListener('click',fn);return b;
@@ -79,7 +79,7 @@ async function search(){
  for(const n of matches)result.append(leaf('Seite '+n,0,()=>showPage(n)));
  report(matches.length+' Seiten mit Treffern gefunden.'+(matches.length===100?' Anzeige auf 100 Seiten begrenzt.':''));
 }
-async function openLocal(file){
+async function openLocal(file,cloudId=null){
  if(!isOwner()){report('Bitte zuerst anmelden.');return}
  if(!file)return;
  if(!file.name.toLowerCase().endsWith('.pdf')&&file.type!=='application/pdf'){report('Bitte eine PDF-Datei auswählen.');return}
@@ -87,7 +87,7 @@ async function openLocal(file){
  clearDocument();report('PDF wird ausschließlich lokal im Browser gelesen …');
  try{
  const lib=await engine();const bytes=new Uint8Array(await file.arrayBuffer());documentPDF=await lib.getDocument({data:bytes}).promise;
- docKey='st-pdf-bookmarks-'+file.name+'-'+file.size;document.dispatchEvent(new CustomEvent('st-pdf-open',{detail:{key:file.name+'-'+file.size}}));
+ cloudDocumentId=cloudId;docKey='st-pdf-bookmarks-'+file.name+'-'+file.size;document.dispatchEvent(new CustomEvent('st-pdf-open',{detail:{key:file.name+'-'+file.size,cloudId}}));
  try{bookmarks=JSON.parse(localStorage.getItem(docKey)||'[]').filter(Number.isInteger)}catch{bookmarks=[]}
  outline=await documentPDF.getOutline()||[];workspace.hidden=false;g('stPdfFileLabel').textContent=file.name;g('stPdfClose').disabled=false;g('stPdfSearch').value='';g('stPdfOutlineSearch').value='';outlineView();drawBookmarks();await showPage(1);report('PDF lokal geöffnet · '+documentPDF.numPages+' Seiten · '+outline.length+' Hauptkapitel. Keine Übertragung an GitHub oder Railway.');
  }catch(e){clearDocument();report('PDF konnte nicht geöffnet werden: '+e.message)}
@@ -95,7 +95,7 @@ async function openLocal(file){
 function drawBookmarks(){
  const root=g('stPdfBookmarks');root.replaceChildren();for(const n of [...new Set(bookmarks)].sort((a,b)=>a-b)){const b=leaf('☆ Seite '+n,0,()=>showPage(n));root.append(b)}
 }
-function remember(){if(!documentPDF)return;bookmarks=bookmarks.includes(current)?bookmarks.filter(n=>n!==current):[...bookmarks,current];try{localStorage.setItem(docKey,JSON.stringify(bookmarks))}catch{}drawBookmarks();report(bookmarks.includes(current)?'Seite '+current+' gemerkt.':'Lesezeichen entfernt.')}
+function remember(){if(!documentPDF)return;bookmarks=bookmarks.includes(current)?bookmarks.filter(n=>n!==current):[...bookmarks,current];try{localStorage.setItem(docKey,JSON.stringify(bookmarks))}catch{}drawBookmarks();report(bookmarks.includes(current)?'Seite '+current+' gemerkt.':'Lesezeichen entfernt.');document.dispatchEvent(new CustomEvent('st-pdf-bookmarks-change',{detail:{bookmarks:[...bookmarks]}}))}
 input.addEventListener('change',e=>openLocal(e.target.files[0]));
 g('stPdfClose').addEventListener('click',()=>{clearDocument();report('PDF geschlossen. Keine PDF-Datei wurde gespeichert oder hochgeladen.')});
 g('stPdfPrev').addEventListener('click',()=>showPage(current-1));g('stPdfNext').addEventListener('click',()=>showPage(current+1));
@@ -109,6 +109,7 @@ g('stPdfSearch').addEventListener('keydown',e=>{if(e.key==='Enter')search()});
 document.addEventListener('visibilitychange',()=>{if(!isOwner()&&documentPDF){clearDocument();report('Reader aus Sicherheitsgründen geschlossen.')}});
 document.querySelectorAll('.nav .tab').forEach(b=>b.addEventListener('click',()=>{if(!isOwner()&&documentPDF)clearDocument()}));
 
-export async function openCloudPdf(file){return openLocal(file)}
+export async function openCloudPdf(file,id){return openLocal(file,id)}
+export function setCloudBookmarks(items){if(!documentPDF)return;bookmarks=[...new Set(items.filter(n=>Number.isInteger(n)&&n>=1&&n<=documentPDF.numPages))];try{localStorage.setItem(docKey,JSON.stringify(bookmarks))}catch{}drawBookmarks()}
 export function navigateToPage(n){return showPage(n)}
 export function getPdfPage(){return current}
