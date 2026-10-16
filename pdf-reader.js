@@ -14,7 +14,7 @@ function clearDocument(){
  searchVersion++;renderVersion++;
  if(renderTask){try{renderTask.cancel()}catch{}renderTask=null}
  if(documentPDF){documentPDF.destroy().catch(()=>{});documentPDF=null}
- current=1;zoom=1;outline=[];bookmarks=[];docKey='';workspace.hidden=true;layer.replaceChildren();g('stPdfOutline').replaceChildren();g('stPdfResults').replaceChildren();g('stPdfBookmarks').replaceChildren();g('stPdfFileLabel').textContent='Noch kein Dokument ausgewählt';g('stPdfClose').disabled=true;input.value='';
+ document.dispatchEvent(new Event('st-pdf-close'));current=1;zoom=1;outline=[];bookmarks=[];docKey='';workspace.hidden=true;layer.replaceChildren();g('stPdfOutline').replaceChildren();g('stPdfResults').replaceChildren();g('stPdfBookmarks').replaceChildren();g('stPdfFileLabel').textContent='Noch kein Dokument ausgewählt';g('stPdfClose').disabled=true;input.value='';
 }
 function leaf(text,depth,fn){
  const b=document.createElement('button');b.type='button';b.textContent=text;b.style.paddingLeft=(8+Math.min(depth,7)*15)+'px';b.addEventListener('click',fn);return b;
@@ -61,7 +61,7 @@ async function showPage(n){
  canvas.width=Math.floor(viewport.width*dpr);canvas.height=Math.floor(viewport.height*dpr);canvas.style.width=viewport.width+'px';canvas.style.height=viewport.height+'px';
  layer.style.width=viewport.width+'px';layer.style.height=viewport.height+'px';layer.replaceChildren();
  const context=canvas.getContext('2d',{alpha:false});renderTask=page.render({canvasContext:context,viewport,transform:dpr!==1?[dpr,0,0,dpr,0,0]:undefined});
- await renderTask.promise;if(ticket!==renderVersion)return;await drawLinks(page,viewport);
+ await renderTask.promise;if(ticket!==renderVersion)return;await drawLinks(page,viewport);document.dispatchEvent(new CustomEvent('st-pdf-page',{detail:{page:n,width:viewport.width,height:viewport.height}}));
  }catch(e){if(e?.name!=='RenderingCancelledException')report('PDF-Seite konnte nicht dargestellt werden: '+e.message)}finally{if(ticket===renderVersion)renderTask=null}
 }
 async function search(){
@@ -87,7 +87,7 @@ async function openLocal(file){
  clearDocument();report('PDF wird ausschließlich lokal im Browser gelesen …');
  try{
  const lib=await engine();const bytes=new Uint8Array(await file.arrayBuffer());documentPDF=await lib.getDocument({data:bytes}).promise;
- docKey='st-pdf-bookmarks-'+file.name+'-'+file.size;
+ docKey='st-pdf-bookmarks-'+file.name+'-'+file.size;document.dispatchEvent(new CustomEvent('st-pdf-open',{detail:{key:file.name+'-'+file.size}}));
  try{bookmarks=JSON.parse(localStorage.getItem(docKey)||'[]').filter(Number.isInteger)}catch{bookmarks=[]}
  outline=await documentPDF.getOutline()||[];workspace.hidden=false;g('stPdfFileLabel').textContent=file.name;g('stPdfClose').disabled=false;g('stPdfSearch').value='';g('stPdfOutlineSearch').value='';outlineView();drawBookmarks();await showPage(1);report('PDF lokal geöffnet · '+documentPDF.numPages+' Seiten · '+outline.length+' Hauptkapitel. Keine Übertragung an GitHub oder Railway.');
  }catch(e){clearDocument();report('PDF konnte nicht geöffnet werden: '+e.message)}
@@ -108,3 +108,6 @@ g('stPdfSearchBtn').addEventListener('click',search);
 g('stPdfSearch').addEventListener('keydown',e=>{if(e.key==='Enter')search()});
 document.addEventListener('visibilitychange',()=>{if(!isOwner()&&documentPDF){clearDocument();report('Reader aus Sicherheitsgründen geschlossen.')}});
 document.querySelectorAll('.nav .tab').forEach(b=>b.addEventListener('click',()=>{if(!isOwner()&&documentPDF)clearDocument()}));
+
+export function navigateToPage(n){return showPage(n)}
+export function getPdfPage(){return current}
