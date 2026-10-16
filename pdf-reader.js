@@ -61,7 +61,7 @@ async function showPage(n){
  canvas.width=Math.floor(viewport.width*dpr);canvas.height=Math.floor(viewport.height*dpr);canvas.style.width=viewport.width+'px';canvas.style.height=viewport.height+'px';
  layer.style.width=viewport.width+'px';layer.style.height=viewport.height+'px';layer.replaceChildren();
  const context=canvas.getContext('2d',{alpha:false});renderTask=page.render({canvasContext:context,viewport,transform:dpr!==1?[dpr,0,0,dpr,0,0]:undefined});
- await renderTask.promise;if(ticket!==renderVersion)return;await drawLinks(page,viewport);document.dispatchEvent(new CustomEvent('st-pdf-page',{detail:{page:n,width:viewport.width,height:viewport.height}}));
+ await renderTask.promise;if(ticket!==renderVersion)return;document.dispatchEvent(new CustomEvent('st-pdf-page',{detail:{page:n,width:viewport.width,height:viewport.height}}));try{await drawLinks(page,viewport)}catch(linkErr){console.warn('PDF-Verlinkungen konnten nicht vollständig geladen werden:',linkErr)}
  }catch(e){if(e?.name!=='RenderingCancelledException')report('PDF-Seite konnte nicht dargestellt werden: '+e.message)}finally{if(ticket===renderVersion)renderTask=null}
 }
 async function search(){
