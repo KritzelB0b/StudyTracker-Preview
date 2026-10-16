@@ -6,7 +6,7 @@ let id=null,key=null,generation=0,ready=false,dirty=false,busy=false,timer=null,
 const localKey=k=>'st-reader-annotations-v1-'+k;
 function hasContent(data){return Object.values(data?.pages||{}).some(p=>p?.notes?.length||p?.links?.length||p?.strokes?.length)}
 function schedule(){if(!id||!ready||conflict)return;dirty=true;status('Änderungen werden gespeichert …');clearTimeout(timer);timer=setTimeout(push,1000)}
-async function call(method,doc,payload){const res=await fetch(API+'/private/documents/'+encodeURIComponent(doc)+'/notes',{method,headers:{Authorization:'Bearer '+token(),...(payload?{'Content-Type':'application/json'}:{})},...(payload?{body:JSON.stringify({data:payload,revision})}:{}),cache:'no-store'});if(!res.ok){const err=new Error('HTTP '+res.status);err.status=res.status;throw err}return res.json()}
+async function call(method,doc,payload){const res=await fetch(API+'/private/documents/'+encodeURIComponent(doc)+'/notes',{method,headers:{Authorization:'Bearer '+token(),...(payload?{'Content-Type':'application/json'}:{})},...(payload?{body:JSON.stringify({data:payload,revision})}:{}),cache:'no-store'});if(!res.ok){let detail='';try{const body=await res.json();detail=typeof body.detail==='string'?body.detail:Array.isArray(body.detail)?body.detail.map(x=>x.msg).join('; '):''}catch{}const err=new Error('HTTP '+res.status+(detail?' · '+detail:''));err.status=res.status;throw err}return res.json()}
 async function push(){
  if(!ready||!dirty||busy||!id||conflict)return;
  const doc=id,version=generation,rev=revision;
@@ -18,7 +18,7 @@ async function push(){
  }catch(e){
   if(version!==generation||doc!==id)return;
   dirty=true;
-  if(e.status===409){
+  if(e.status===422||e.status===413){conflict=true;clearTimeout(timer);try{localStorage.setItem(localKey(key)+'-pending-'+doc,JSON.stringify(snapshot))}catch{}status('Cloud hat die Daten abgelehnt ('+e.message+'). Lokal gesichert, keine automatischen Wiederholungen.');}else if(e.status===409){
    conflict=true;clearTimeout(timer);
    try{localStorage.setItem(localKey(key)+'-conflict-'+doc,JSON.stringify(snapshot))}catch{}
    status('Konflikt: Ein anderes Gerät hat neuer gespeichert. Deine Änderungen sind lokal gesichert. PDF bitte schließen und erneut öffnen; Änderungen vor dem Schließen ggf. separat sichern.');
