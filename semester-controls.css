@@ -1,0 +1,53 @@
+
+/* Shared semester switches, owner-only rename form and narrow month-calendar counters. */
+.st-term-switch{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;background:#292622;border:1px solid #605446;border-radius:14px;padding:13px 16px;margin-bottom:18px}
+.st-term-switch label{font-weight:750;font-size:14px}
+.st-term-switch select{max-width:330px;min-width:220px;flex:1 1 220px;min-height:43px;padding:10px;background:#1e1d1b;border:1px solid #65594a;border-radius:10px;color:#f5f1ec}
+.st-term-hint{font-size:12px;line-height:1.4;color:#c3b6a8;flex:2 1 220px}
+.st-topic-filter{margin:4px 0 13px}
+.st-topic-filter select{max-width:100%}
+.st-rename-dialog{border-radius:18px;background:#34312e;color:#f3efeb;border:1px solid #796a5b;width:min(460px,calc(100vw - 22px));max-width:calc(100vw - 22px);padding:21px;box-shadow:0 18px 65px #000a}
+.st-rename-dialog::backdrop{background:#080706cb}
+.st-edit-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:17px}
+.st-edit-head h2{margin:0;font-size:19px;font-weight:720}
+.st-edit-head .secondary{padding:5px 11px;font-size:23px;line-height:1;min-width:44px;min-height:44px}
+.st-edit-error{color:#ffc0b7;font-size:12px;min-height:14px}
+.st-edit-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;margin-top:20px}
+.st-edit-actions button{min-height:43px}
+#semCalendar .sem-day{min-width:0}
+#semCalendar .sem-tag-compact{display:none}
+#semCalendar .sem-tag-label{display:inline}
+#semCalendar .sem-day.sem-outside{opacity:.32;cursor:default}
+#semCalendar .sem-day.sem-outside .small{display:none}
+@media(max-width:700px){
+ #semCalendar{gap:4px}
+ #semCalendar .sem-day{min-height:82px;padding:5px 3px;border-radius:7px;display:flex;flex-direction:column;align-items:stretch;gap:5px}
+ #semCalendar .sem-day strong{font-size:12px;line-height:1.2}
+ #semCalendar .sem-day .small{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;width:100%;margin:0;overflow:visible}
+ #semCalendar .sem-tag{display:flex;align-items:center;justify-content:center;max-width:100%;min-width:0;height:17px;min-height:17px;font-size:10px!important;line-height:1!important;font-weight:750;padding:0 1px!important;margin:0;border-left:3px solid var(--event-color,#db7c31);border-radius:3px;white-space:nowrap;overflow:hidden}
+ #semCalendar .sem-learn{border-left-color:#34d399}
+ #semCalendar .sem-tag::first-letter{font-size:10px!important}
+ #semCalendar .sem-tag-label{display:none}
+ #semCalendar .sem-tag-compact{display:inline}
+ .st-term-switch{padding:11px;margin-bottom:14px;gap:7px}
+ .st-term-switch select{min-width:0;flex-basis:100%;max-width:100%}
+ .st-term-hint{flex-basis:100%}
+ .st-edit-actions{display:grid;grid-template-columns:1fr 1fr}
+ .st-edit-actions button{padding:10px 6px}
+}
+@media(max-width:370px){
+ #semCalendar{gap:2px}
+ #semCalendar .sem-day{padding:5px 2px}
+ #semCalendar .sem-day .small{gap:2px}
+}
+
+/* Keep action buttons usable when modules and praxis titles get long. */
+#topics .module-row{flex-wrap:wrap}
+#topics .module-row>div:first-child{min-width:0;flex:1 1 160px}
+#topics .module-row .module-name{overflow-wrap:anywhere}
+#topics .module-row .actions{margin-left:auto;flex:0 0 auto}
+#topics .topic-top{flex-wrap:wrap}
+#topics .topic-tools{margin-left:auto}
+.phase-card>.title-row{flex-wrap:wrap}
+.phase-card>.title-row>div:first-child{flex:1 1 180px;min-width:0}
+.phase-card>.title-row button{padding:8px 10px;min-height:40px;font-size:12px}
