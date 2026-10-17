@@ -12,7 +12,9 @@ const SEMESTERS=[
  {id:'ss-2027',label:'Sommersemester 2027',start:'2027-04-01',end:'2027-09-30'},
  {id:'ws-2027',label:'Wintersemester 2027/28',start:'2027-10-01',end:'2028-03-31'},
  {id:'ss-2028',label:'Sommersemester 2028',start:'2028-04-01',end:'2028-09-30'},
- {id:'ws-2028',label:'Wintersemester 2028/29',start:'2028-10-01',end:'2029-03-31'}
+ {id:'ws-2028',label:'Wintersemester 2028/29',start:'2028-10-01',end:'2029-03-31'},
+ {id:'ss-2029',label:'Sommersemester 2029',start:'2029-04-01',end:'2029-09-30'},
+ {id:'ws-2029',label:'Wintersemester 2029/30',start:'2029-10-01',end:'2030-03-31'}
 ];
 const LEGACY_TERM='ws-2026';
 function studyRoot(){if(!db.study||typeof db.study!=='object'||Array.isArray(db.study))db.study={modules:[],events:[],tasks:[]};return db.study}

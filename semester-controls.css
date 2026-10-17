@@ -51,3 +51,42 @@
 .phase-card>.title-row{flex-wrap:wrap}
 .phase-card>.title-row>div:first-child{flex:1 1 180px;min-width:0}
 .phase-card>.title-row button{padding:8px 10px;min-height:40px;font-size:12px}
+
+
+/* Mobile calendar v2: deliberately display color indicators, never narrow text labels.
+   Full event names and times are in the selected day's detail below the calendar. */
+.st-handbook-intro{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.st-handbook-intro h3{font-size:17px;margin:0 0 7px}
+.st-handbook-intro .sub{max-width:740px;line-height:1.5}
+.st-handbook-intro button{flex:0 0 auto}
+.st-handbook-details{margin-top:13px;border:1px solid #5d5348;border-radius:12px;padding:13px;background:#272522}
+.st-handbook-details summary{cursor:pointer;font-weight:700;color:#f2d2b4}
+.st-handbook-row{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid #51483f;padding:13px 0}
+.st-handbook-row:first-child{margin-top:12px}
+.st-handbook-row>div{min-width:0}
+.st-handbook-row strong{font-size:14px;overflow-wrap:anywhere}
+.st-handbook-row .sub{margin-top:5px;line-height:1.55}
+.st-handbook-row button{flex:0 0 auto;min-height:38px}
+.st-handbook-state{font-size:12px;color:#b5d8c2}
+@media(max-width:700px){
+ #semCalendar .sem-day{overflow:hidden!important;min-height:75px!important}
+ #semCalendar .sem-day .small{display:flex!important;flex-wrap:wrap!important;align-content:flex-start;gap:3px!important;max-height:25px;min-width:0;overflow:hidden!important}
+ #semCalendar .sem-tag,#semCalendar .sem-tag[class*="ev-"]{
+  display:inline-block!important;flex:0 0 9px!important;width:9px!important;max-width:9px!important;
+  height:9px!important;min-height:9px!important;max-height:9px!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:3px!important;
+  background:var(--event-color,#dd853f)!important;color:transparent!important;
+  font-size:0!important;line-height:0!important;overflow:hidden!important;text-indent:-9999px!important;
+ }
+ #semCalendar .sem-tag.sem-learn{background:#34d399!important}
+ #semCalendar .sem-tag-label,#semCalendar .sem-tag-compact,#semCalendar .sem-tag *{display:none!important}
+ #semCalendar .sem-day strong{line-height:1.25!important}
+ #semester .title-row:has(.sem-toolbar){flex-wrap:wrap;gap:10px}
+ #semester .title-row:has(.sem-toolbar)>h2{flex:1 1 100%;margin:0}
+ #semester .sem-toolbar{width:100%;display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:9px}
+ #semester .sem-toolbar strong{text-align:center;min-width:0;white-space:normal;font-size:15px}
+ #semester .sem-toolbar button{min-width:44px;min-height:44px;padding:9px}
+ .st-handbook-intro button{width:100%}
+ .st-handbook-row{align-items:flex-start;flex-wrap:wrap}
+ .st-handbook-row button{min-width:140px}
+}
