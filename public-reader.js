@@ -103,7 +103,7 @@
  const hasGoals=goalRows&&(hand.length>0||meta.some(m=>safeHours(m.self)>0));
  const objective=hasGoals?goalRows:'<p class="sub">Keine Wochenziele für die öffentliche Ansicht verfügbar.</p>';
  const cockpit='<div class="statsmini"><div><span class="sub">Lerneinheiten</span><strong>'+Number(a.sessions||0)+'</strong></div><div><span class="sub">Aktive Lerntage</span><strong>'+by.filter(x=>safeHours(x.hours)>0).length+'</strong></div><div><span class="sub">Öffentliche Ansicht</span><strong>Lesemodus</strong></div></div>';
- return '<div class="stack st-public-dashboard"><div class="grid3 st-public-metrics">'+
+ return '<div class="stack st-public-dashboard">'+info('Diese freigegebene Gesamtstatistik wird von der aktuellen öffentlichen API noch nicht nach Semestern getrennt. Die Semester-Auswahl findest du unter Module & Themen oder Studienplan.')+'<div class="grid3 st-public-metrics">'+
  '<div class="metric"><div class="sub">Heute gelernt</div><div class="num">'+hr(safeHours(by.find(x=>x.date===today)?.hours))+'</div><div class="small muted">Erfasste Lernzeit</div></div>'+
  '<div class="metric"><div class="sub">Diese Woche</div><div class="num">'+hr(weekHours)+'</div><div class="small muted">Montag bis Sonntag</div></div>'+
  '<div class="metric"><div class="sub">Gesamte Lernzeit</div><div class="num">'+hr(a.hours)+'</div><div class="small muted">'+Number(a.sessions||0)+' Lerneinheiten</div></div></div>'+
@@ -171,7 +171,7 @@
  const days=Array.isArray(data?.by_day)?data.by_day:[];
  const rows=days.length?days.slice().reverse().map(d=>'<div class="entry"><strong>'+esc(d.date)+'</strong><strong>'+hr(safeHours(d.hours))+'</strong></div>').join(''):'<p class="sub">Noch keine Lerntage vorhanden.</p>';
  const summary='<div class="statsmini"><div><span class="sub">Gesamte Lernzeit</span><strong>'+hr(data?.summary?.hours)+'</strong></div><div><span class="sub">Lerneinheiten</span><strong>'+Number(data?.summary?.sessions||0)+'</strong></div><div><span class="sub">Aktive Lerntage</span><strong>'+days.filter(x=>safeHours(x.hours)>0).length+'</strong></div></div>';
- return '<div class="stack st-public-history"><section class="card st-public-chart-card">'+halfRing()+'</section>'+
+ return '<div class="stack st-public-history">'+info('Das öffentliche Lernprotokoll zeigt den freigegebenen Gesamtstand, nicht einzelne Semester.')+'<section class="card st-public-chart-card">'+halfRing()+'</section>'+
  '<div class="st-public-history-columns"><section class="card"><h2>Lerncopilot</h2>'+summary+'</section>'+
  '<section class="card"><h2>Lerntage</h2><div class="scroll-box">'+rows+'</div></section></div>'+workload()+'</div>';
 }
