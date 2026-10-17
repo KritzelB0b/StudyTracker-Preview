@@ -254,11 +254,23 @@ async function testLogin(mode){
  try{
   const response=await fetch(API+'/auth/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'studytracker-test@example.com',password})});
   if(!response.ok){const error=await response.json();throw Error(typeof error.detail==='string'?error.detail:'HTTP '+response.status)}
-  const data=await response.json();sessionStorage.setItem('studytracker_test_cloud_token',data.token);$('cloudTestPassword').value='';await refresh();
+  const data=await response.json();sessionStorage.setItem('studytracker_test_cloud_token',data.token);$('cloudTestPassword').value='';refreshFileAuth();await refresh();
  }catch(e){notice('Anmeldung fehlgeschlagen: '+e.message)}
 }
 $('cloudTestRegister').addEventListener('click',()=>testLogin('register'));
 $('cloudTestLogin').addEventListener('click',()=>testLogin('login'));
+function refreshFileAuth(){$('cloudTestLogout').hidden=!token()}
+$('cloudTestLogout').addEventListener('click',async()=>{
+ const oldToken=token();sessionStorage.removeItem('studytracker_test_cloud_token');
+ folder=null;folders=[];files=[];paint();refreshFileAuth();
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),6000);
+ let revoked=false;
+ try{if(oldToken){const response=await fetch(API+'/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+oldToken},signal:controller.signal});revoked=response.ok}}
+ catch(e){}finally{clearTimeout(timeout)}
+ notice(revoked?'Test-Datei-Cloud abgemeldet. Sitzung auf dem Server widerrufen.':'Datei-Cloud lokal abgemeldet. Serverwiderruf nicht bestätigt; bereits heruntergeladene lokale Daten bleiben bestehen.');
+});
+refreshFileAuth();
+
 $('cloudFolderCreate').addEventListener('click',createFolder);
 $('cloudFileUpload').addEventListener('click',upload);
 $('cloudFilesReload').addEventListener('click',refresh);
