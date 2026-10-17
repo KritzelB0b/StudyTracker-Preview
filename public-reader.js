@@ -1,7 +1,7 @@
 /* StudyTracker Preview 3.3: server-projected public data + standalone handbook; never read private account data in visitor rendering. */
 (()=>{
  'use strict';
- const API='https://studytracker-api-production-7134.up.railway.app';
+ const API='https://studytracker-privatefiles-api-test.up.railway.app';
  const $=id=>document.getElementById(id);
  const esc=x=>String(x??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
  const num=x=>Number(x||0).toLocaleString('de-DE',{maximumFractionDigits:1});
