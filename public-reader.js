@@ -1,4 +1,4 @@
-/* StudyTracker 3.0: one editor shell, zero private local-storage reads in visitor mode. */
+/* StudyTracker Preview 3.3: server-projected public data + standalone handbook; never read private account data in visitor rendering. */
 (()=>{
  'use strict';
  const API='https://studytracker-api-production-7134.up.railway.app';
@@ -12,9 +12,59 @@
  const palette=['#e97812','#dba563','#87b4a1','#b09dbe','#d59a89','#9bb7bf'];
  const map={dashboard:'dashboard',topics:'modules',semester:'calendar',planner:'calendar',history:'cockpit'};
  const cats={exam:'Prüfung',lecture:'Vorlesung',exercise:'Übung',tutorial:'Tutorium',practical:'Praktikum',coaching:'Coaching',task:'Aufgabe',study:'Lernblock'};
- let data=null,active='dashboard',monthOffset=0,weekOffset=0,selected=iso(new Date()),selectedModule='',error='';
- function events(d){const result=[];for(const e of data?.events||[])if(e.date===d)result.push({type:kind(e.kind+' '+e.title),title:e.title,start:e.start,end:e.end});for(const [field,type] of [['tasks','task'],['exams','exam'],['study_blocks','study']])for(const e of data?.[field]||[])if(e.date===d)result.push({type,title:e.title,start:'',end:''});return result}
- function kind(s){s=String(s||'');if(/prüfung|klausur|exam/i.test(s))return 'exam';if(/übung/i.test(s))return 'exercise';if(/tutor/i.test(s))return 'tutorial';if(/praktik|labor/i.test(s))return 'practical';if(/coach/i.test(s))return 'coaching';return 'lecture'}
+ let data=null,active='dashboard',selected=iso(new Date()),selectedModule='',error='';
+ const TERMS=[
+ {id:'ws-2026',label:'Wintersemester 2026/27',start:'2026-10-01',end:'2027-03-31'},
+ {id:'ss-2027',label:'Sommersemester 2027',start:'2027-04-01',end:'2027-09-30'},
+ {id:'ws-2027',label:'Wintersemester 2027/28',start:'2027-10-01',end:'2028-03-31'},
+ {id:'ss-2028',label:'Sommersemester 2028',start:'2028-04-01',end:'2028-09-30'},
+ {id:'ws-2028',label:'Wintersemester 2028/29',start:'2028-10-01',end:'2029-03-31'},
+ {id:'ss-2029',label:'Sommersemester 2029',start:'2029-04-01',end:'2029-09-30'},
+ {id:'ws-2029',label:'Wintersemester 2029/30',start:'2029-10-01',end:'2030-03-31'}
+ ];
+ const firstTerm='ws-2026';
+ let termId=firstTerm, catalogFilter='',monthOffset=0,weekOffset=0;
+ const term=()=>TERMS.find(t=>t.id===termId)||TERMS[0];
+ const termNumber=()=>TERMS.findIndex(t=>t.id===termId)+1;
+ const isLegacy=()=>termId===firstTerm;
+ const canShow=field=>!!data?.fields?.includes(field);
+ const publicHandbook=()=>Array.isArray(window.studyHandbookCatalog?.modules)?window.studyHandbookCatalog.modules:[];
+ const catalog=()=>publicHandbook().filter(m=>m.termNumbers.includes(termNumber()));
+ function termPicker(){return '<div class="st-public-term"><label for="publicSemester">Semester</label><select id="publicSemester" aria-label="Semester im Lesemodus auswählen">'+TERMS.map(t=>'<option value="'+esc(t.id)+'" '+(t.id===termId?'selected':'')+'>'+esc(t.label)+'</option>').join('')+'</select><span class="sub small">Öffentlicher Überblick aus Modulhandbuch Version 8</span></div>'}
+ function info(text){return '<p class="st-public-info">'+esc(text)+'</p>'}
+ function handbook(){
+  const ms=catalog(),choices=ms.filter(m=>m.type==='Wahlpflicht'),regular=ms.filter(m=>m.type==='Pflicht');
+  const opts='<option value="">Alle Module ('+ms.length+')</option>'+ms.map(m=>'<option value="'+esc(m.code)+'" '+(catalogFilter===m.code?'selected':'')+'>'+esc(m.name)+'</option>').join('');
+  function part(items,title){const show=items.filter(m=>!catalogFilter||m.code===catalogFilter);
+   return '<section class="st-public-handbook-section"><h4>'+title+' ('+show.length+')</h4>'+(
+   show.length?show.map(m=>'<div class="st-public-handbook-row"><strong>'+esc(m.name)+'</strong><span class="sub small">Code '+esc(m.code)+' · '+m.ects+' ECTS · '+m.total+' h gesamt · '+m.presence+' h Präsenz · '+m.self+' h Selbststudium · laut Handbuch: '+esc(m.semesterText)+'</span></div>').join(''):'<p class="sub small">Keine passenden Module.</p>')+'</section>';
+  }
+  return '<section class="card st-public-handbook"><div class="title-row"><div><h2>Modulhandbuch · '+esc(term().label)+'</h2><p class="sub">Allgemeiner Modulkatalog – unabhängig von privaten Lerndaten. Mehrfach aufgeführte Semester bedeuten alternative Belegungszeiträume.</p></div><span class="pill">Nur lesen</span></div><div class="field"><label for="publicHandbookFilter">Modul filtern</label><select id="publicHandbookFilter">'+opts+'</select></div>'+part(regular,'Pflichtmodule')+part(choices,'Wahlpflichtangebote')+'<p class="sub small">Wahlpflichtmodule sind Angebote, nicht automatisch Teil deines individuellen Studienplans. Echte Stundenplan- und Prüfungstermine sind im Modulhandbuch nicht enthalten.</p></section>';
+ }
+ function setTerm(id){if(!TERMS.some(t=>t.id===id))return;termId=id;monthOffset=0;weekOffset=0;selected=(iso(new Date())>=term().start&&iso(new Date())<=term().end)?iso(new Date()):term().start;selectedModule='';catalogFilter='';render()}
+
+ function events(d){
+  if(!isLegacy())return [];
+  const result=[];
+  if(canShow('calendar')){
+   for(const e of data?.events||[])if(e.date===d)result.push({type:kind(e.kind+' '+e.title),title:e.title,start:e.start,end:e.end});
+   for(const e of data?.study_blocks||[])if(e.date===d)result.push({type:'study',title:e.title,start:'',end:''});
+  }
+  for(const [field,type] of [['tasks','task'],['exams','exam']])if(canShow(field))
+   for(const e of data?.[field]||[])if(e.date===d)result.push({type,title:e.title,start:'',end:''});
+  return result;
+ }
+ function kind(s){s=String(s||'').toLowerCase();
+  const valid=['exam','lecture','exercise','tutorial','practical','coaching','task','study'];
+  for(const item of valid)if(s.split(/\W+/).includes(item))return item;
+  if(/prüfung|klausur|exam/.test(s))return 'exam';
+  if(/übung|uebung/.test(s))return 'exercise';
+  if(/tutor/.test(s))return 'tutorial';
+  if(/praktik|labor/.test(s))return 'practical';
+  if(/coach/.test(s))return 'coaching';
+  if(/lernblock|selbststudium/.test(s))return 'study';
+  return 'lecture';
+ }
  function chips(items,compressed=false){return items.map(x=>`<span class="${compressed?'sem-tag':'event-block'} ev-${x.type}">${compressed?esc(cats[x.type]||x.type):esc((x.start?x.start+' ':'')+x.title)}</span>`).join('')}
 
  const chartPalette=['#ee7d22','#eab264','#80b7a1','#cfa18c','#b9a3d1','#91b2c8','#e2c878','#b1aba2'];
@@ -53,7 +103,7 @@
  const hasGoals=goalRows&&(hand.length>0||meta.some(m=>safeHours(m.self)>0));
  const objective=hasGoals?goalRows:'<p class="sub">Keine Wochenziele für die öffentliche Ansicht verfügbar.</p>';
  const cockpit='<div class="statsmini"><div><span class="sub">Lerneinheiten</span><strong>'+Number(a.sessions||0)+'</strong></div><div><span class="sub">Aktive Lerntage</span><strong>'+by.filter(x=>safeHours(x.hours)>0).length+'</strong></div><div><span class="sub">Öffentliche Ansicht</span><strong>Lesemodus</strong></div></div>';
- return '<div class="stack st-public-dashboard"><div class="grid3 st-public-metrics">'+
+ return '<div class="stack st-public-dashboard">'+info('Diese freigegebene Gesamtstatistik wird von der aktuellen öffentlichen API noch nicht nach Semestern getrennt. Die Semester-Auswahl findest du unter Module & Themen oder Studienplan.')+'<div class="grid3 st-public-metrics">'+
  '<div class="metric"><div class="sub">Heute gelernt</div><div class="num">'+hr(safeHours(by.find(x=>x.date===today)?.hours))+'</div><div class="small muted">Erfasste Lernzeit</div></div>'+
  '<div class="metric"><div class="sub">Diese Woche</div><div class="num">'+hr(weekHours)+'</div><div class="small muted">Montag bis Sonntag</div></div>'+
  '<div class="metric"><div class="sub">Gesamte Lernzeit</div><div class="num">'+hr(a.hours)+'</div><div class="small muted">'+Number(a.sessions||0)+' Lerneinheiten</div></div></div>'+
@@ -64,25 +114,123 @@
  '<section class="card"><div class="title-row"><div><h2>Wochenziele & Lernfortschritt</h2><div class="sub">Nur freigegebene Ziele</div></div></div>'+objective+'</section>'+
  '<section class="card"><h2>Dein Lerncockpit</h2>'+cockpit+'</section></div></div></div>';
 }
- function modules(){const ms=data?.modules||[],ts=data?.topics||[];if(!ms.some(m=>m.id===selectedModule))selectedModule=ms[0]?.id||'';const m=ms.find(m=>m.id===selectedModule),topics=ts.filter(t=>t.moduleId===selectedModule);let logs=data?.by_module||[],hours=logs.find(x=>x.moduleId===m?.id)?.hours||0,work=(data?.workload||[]).find(x=>x.moduleId===m?.id),goal=work?.self??m?.self;
- return `<section class="card"><div class="title-row"><h2>Modul-Cockpit</h2><span class="pill">Lesemodus</span></div><div class="field"><label>Modul auswählen</label><select id="publicModule">${ms.map(x=>`<option value="${esc(x.id)}" ${x.id===selectedModule?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div>${m?`<div class="statsmini"><div><div class="sub">ECTS</div><strong>${esc(work?.ects??m.ects??'–')}</strong></div><div><div class="sub">Soll Selbststudium</div><strong>${goal===undefined?'–':hr(goal)}</strong></div><div><div class="sub">Ist gelernt</div><strong>${hr(hours)}</strong></div></div><h3>Themen & Unterthemen</h3><div class="scroll-section">${topics.map(t=>`<div class="topic ${t.parentId?'topic-indent':''}"><div class="topic-top"><div class="topic-title">${t.parentId?'↳ ':''}${esc(t.name)}</div><span class="chip">${esc(t.mastery)}/5</span></div></div>`).join('')||'<div class="empty">Keine Themen freigegeben</div>'}</div>`:'<p class="empty">Keine freigegebenen Module</p>'}</section>`}
- function workload(){const m=data?.workload?.length?data.workload:data?.modules||[],logs=data?.by_module||[];return `<section class="card"><h2>Soll-Ist-Workload · Selbststudium</h2><p class="sub">Soll nach Modulhandbuch, Ist aus erfasster Lernzeit. Präsenzstunden zählen nicht automatisch als gelernt.</p><div style="overflow:auto"><table class="sem-table"><thead><tr><th>Modul</th><th>ECTS</th><th>Soll selbst</th><th>Ist gelernt</th><th>Offen selbst</th></tr></thead><tbody>${m.map(x=>{const h=Number(logs.find(l=>l.moduleId===(x.moduleId||x.id))?.hours||0),g=Number(x.self||0);return `<tr><td>${esc(x.name)}</td><td>${esc(x.ects??'–')}</td><td>${hr(g)}</td><td>${hr(h)}</td><td>${hr(Math.max(0,g-h))}</td></tr>`}).join('')}</tbody></table></div></section>`}
- function calendar(){const t=new Date();const base=new Date(t.getFullYear(),t.getMonth()+monthOffset,1),start=new Date(base);start.setDate(1-(base.getDay()+6)%7);const days=Array.from({length:42},(_,i)=>{let d=new Date(start);d.setDate(start.getDate()+i);return d});let dayItems=events(selected);return `<div class="stack">${workload()}<section class="card"><div class="view-toolbar"><h2>Kalender</h2><div class="buttons"><button class="secondary" data-cal-prev>←</button><strong>${base.toLocaleDateString('de-DE',{month:'long',year:'numeric'})}</strong><button class="secondary" data-cal-next>→</button></div></div><p class="quiet-note">Termine nach Veranstaltungstyp farbig markiert. Ein Tag öffnet die Details.</p><div class="filter-line">${Object.entries(cats).map(([k,n])=>`<span class="event-pill ev-${k}">${n}</span>`).join('')}</div><div class="sem-calendar">${days.map(d=>{const key=iso(d),ev=events(key);return `<button type="button" data-select-day="${key}" class="reader-day ${d.getMonth()!==base.getMonth()?'offmonth':''} ${key===selected?'active':''}"><strong>${d.getDate()}</strong>${[...new Set(ev.map(x=>x.type))].map(k=>`<span class="sem-tag ev-${k}">${ev.filter(e=>e.type===k).length}× ${esc(cats[k]||k)}</span>`).join('')}</button>`}).join('')}</div><h3>${date(selected)}</h3>${dayItems.map(e=>`<div class="sem-event ev-${e.type}"><span class="event-pill ev-${e.type}">${esc(cats[e.type])}</span><b>${esc((e.start?e.start+'–'+e.end+' · ':'')+e.title)}</b></div>`).join('')||'<p class="sub">Keine Termine für diesen Tag.</p>'}</section></div>`}
- function planner(){const today=new Date(),start=new Date(today);start.setDate(today.getDate()-(today.getDay()+6)%7+weekOffset*7);const days=Array.from({length:7},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return iso(d)});return `<div class="stack"><section class="card"><div class="view-toolbar"><h2>Wochenplan</h2><div class="buttons"><button class="secondary" data-week-prev>←</button><strong>${date(days[0])} – ${date(days[6])}</strong><button class="secondary" data-week-next>→</button></div></div><div style="overflow-x:auto"><div class="planweek">${days.map(d=>`<div class="planday"><h3>${date(d)}</h3>${events(d).map(e=>`<span class="event-block ev-${e.type}">${esc((e.start?e.start+' ':'')+e.title)}</span>`).join('')}</div>`).join('')}</div></div></section><div class="list-grid"><section class="card"><h2>Aufgaben & Abgaben</h2>${(data?.tasks||[]).map(e=>`<div class="taskrow">${esc(e.title)} <span class="chip">${esc(e.date)}</span></div>`).join('')||'<p class="sub">Keine öffentlichen Aufgaben</p>'}</section><section class="card"><h2>Prüfungsvorbereitung</h2>${(data?.exams||[]).map(e=>`<div class="taskrow">${esc(e.title)} <span class="chip">${esc(e.date)}</span></div>`).join('')||'<p class="sub">Keine öffentlichen Prüfungen</p>'}</section></div></div>`}
+ function modules(){
+ const ms=isLegacy()&&canShow('modules')?(data.modules||[]):[];
+ if(!ms.some(m=>m.id===selectedModule))selectedModule=ms[0]?.id||'';
+ const m=ms.find(x=>x.id===selectedModule),ts=(data?.topics||[]).filter(t=>t.moduleId===selectedModule);
+ const work=(data?.workload||[]).find(x=>x.moduleId===m?.id),hours=(data?.by_module||[]).find(x=>x.moduleId===m?.id)?.hours||0;
+ const selector=ms.length?'<div class="field"><label for="publicModule">Freigegebenes Modul auswählen</label><select id="publicModule">'+ms.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===selectedModule?'selected':'')+'>'+esc(x.name)+'</option>').join('')+'</select></div>':'';
+ const details=m?'<div class="statsmini"><div><div class="sub">ECTS</div><strong>'+esc(work?.ects??m.ects??'–')+'</strong></div><div><div class="sub">Selbststudium-Soll</div><strong>'+(work?.self??m?.self)+'</strong> h</div><div><div class="sub">Freigegeben gelernt</div><strong>'+hr(hours)+'</strong></div></div><h3>Themen & Wissensstand</h3><div class="scroll-section">'+(ts.map(t=>'<div class="topic '+(t.parentId?'topic-indent':'')+'"><div class="topic-top"><strong>'+esc(t.parentId?'↳ '+t.name:t.name)+'</strong><span class="chip">'+esc(t.mastery)+'/5</span></div></div>').join('')||'<p class="sub">Keine Themen freigegeben.</p>')+'</div>':'';
+ const note=!isLegacy()?'Für dieses spätere Semester veröffentlicht die aktuelle öffentliche API noch keine individuellen Themen oder Lernstände. Der Modulkatalog unten ist trotzdem verfügbar.':!canShow('modules')?'Individuelle Themen und Wissensstände sind nicht öffentlich freigegeben.':'Freigegebene Module und Themen, ohne Bearbeitungsmöglichkeit.';
+ return '<div class="stack">'+termPicker()+'<section class="card"><div class="title-row"><h2>Themen & Wissensstand</h2><span class="pill">Lesemodus</span></div>'+info(note)+selector+details+'</section>'+handbook()+'</div>';
+ }
+ function workload(){
+  if(!isLegacy())return '';
+  const m=canShow('calendar')||canShow('cockpit')?(data?.workload||[]):[];
+  if(!m.length)return '';
+  const logs=canShow('cockpit')||canShow('dashboard')?data?.by_module||[]:[];
+  return '<section class="card"><h2>Freigegebener Soll-Ist-Workload</h2><p class="sub">Die öffentliche API liefert derzeit nur den bisherigen Studienplan. Zukünftige Semester werden ausschließlich als Handbuch-Katalog angezeigt.</p><div class="st-public-table"><table class="sem-table"><thead><tr><th>Modul</th><th>ECTS</th><th>Gesamt</th><th>Präsenz</th><th>Selbststudium</th><th>Ist</th></tr></thead><tbody>'+m.map(x=>{
+   const h=logs.find(l=>l.moduleId===x.moduleId)?.hours;
+   return '<tr><td>'+esc(x.name)+'</td><td>'+esc(x.ects??'–')+'</td><td>'+hr(x.total)+'</td><td>'+hr(x.presence)+'</td><td>'+hr(x.self)+'</td><td>'+(h===undefined?'Nicht freigegeben':hr(h))+'</td></tr>';
+  }).join('')+'</tbody></table></div></section>';
+ }
+ function calendar(){
+  const termInfo=term(),base=parse(termInfo.start);
+  base.setMonth(base.getMonth()+monthOffset,1);
+  const monthStart=new Date(base),first=new Date(base);first.setDate(1-(first.getDay()+6)%7);
+  const days=Array.from({length:42},(_,i)=>{const d=new Date(first);d.setDate(first.getDate()+i);return d});
+  if(selected<termInfo.start||selected>termInfo.end)selected=termInfo.start;
+  const dayItems=events(selected);
+  const legend=Object.entries(cats).map(([k,v])=>'<span class="event-pill ev-'+k+'">'+v+'</span>').join('');
+  const prevDisabled=monthOffset===0?'disabled':'',nextDisabled=monthOffset>=5?'disabled':'';
+  const calendarNote=isLegacy()&&canShow('calendar')?'Hier erscheinen nur Termine, die für die öffentliche Ansicht freigegeben wurden.':'Für das gewählte Semester ist kein individueller Stundenplan öffentlich freigegeben. Das Modulhandbuch darunter ist unabhängig davon lesbar.';
+  const dateCells=days.map(d=>{
+   const key=iso(d),within=key>=termInfo.start&&key<=termInfo.end,month=d.getMonth()===base.getMonth();
+   const ev=within?events(key):[],types=[...new Set(ev.map(x=>x.type))];
+   const dots=types.map(k=>'<span class="st-public-event-dot ev-'+k+'" aria-hidden="true"></span>').join('');
+   const summary=ev.length?ev.map(x=>cats[x.type]||x.type).join(', '):'Keine freigegebenen Termine';
+   return '<button type="button" class="reader-day '+(!month?'offmonth ':'')+(key===selected?'active ':'')+(!within?'outterm':'')+'" data-select-day="'+key+'" '+(!within?'disabled':'')+' aria-label="'+esc(date(key)+': '+summary)+'"><strong>'+d.getDate()+'</strong><span class="st-public-dot-row" aria-hidden="true">'+dots+'</span></button>';
+  }).join('');
+  const details=dayItems.map(e=>'<div class="sem-event ev-'+e.type+'"><span class="event-pill ev-'+e.type+'">'+esc(cats[e.type]||'Termin')+'</span><b>'+esc((e.start?e.start+'–'+e.end+' · ':'')+e.title)+'</b></div>').join('')||'<p class="sub">Keine öffentlich freigegebenen Termine für diesen Tag.</p>';
+  return '<div class="stack">'+termPicker()+workload()+'<section class="card st-public-calendar"><div class="st-public-cal-head"><h2>Kalender</h2><div class="st-public-month-nav"><button type="button" class="secondary" data-cal-prev aria-label="Vorheriger Monat" '+prevDisabled+'>←</button><strong>'+base.toLocaleDateString('de-DE',{month:'long',year:'numeric'})+'</strong><button type="button" class="secondary" data-cal-next aria-label="Nächster Monat" '+nextDisabled+'>→</button></div></div>'+info(calendarNote)+'<div class="filter-line" aria-label="Farblegende der Veranstaltungstypen">'+legend+'</div><div class="sem-calendar st-public-cal-grid">'+dateCells+'</div><h3>'+esc(parse(selected).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'}))+'</h3>'+details+'</section>'+handbook()+'</div>';
+ }
+ function planner(){
+  const t=term(),anchor=iso(new Date()),d=parse(anchor>=t.start&&anchor<=t.end?anchor:t.start);
+  d.setDate(d.getDate()-(d.getDay()+6)%7+weekOffset*7);
+  const dayObjs=Array.from({length:7},(_,i)=>{const x=new Date(d);x.setDate(d.getDate()+i);return x});
+  const days=dayObjs.map(iso),prevDisabled=days[0]<=t.start?'disabled':'',nextDisabled=days[6]>=t.end?'disabled':'';
+  const cells=days.map(day=>{
+    const within=day>=t.start&&day<=t.end,ev=within?events(day):[];
+    return '<div class="planday '+(within?'':'st-outterm')+'"><h3>'+date(day)+'</h3>'+ev.map(e=>'<span class="event-block ev-'+e.type+'"><small>'+esc(cats[e.type]||'Termin')+'</small>'+esc((e.start?e.start+'–'+e.end+' · ':'')+e.title)+'</span>').join('')+'</div>';
+  }).join('');
+  const tasks=isLegacy()&&canShow('tasks')?(data?.tasks||[]):[],exams=isLegacy()&&canShow('exams')?(data?.exams||[]):[];
+  const taskRows=(items,empty)=>items.length?items.map(e=>'<div class="taskrow">'+esc(e.title)+' <span class="chip">'+esc(e.date)+'</span></div>').join(''):'<p class="sub">'+empty+'</p>';
+  return '<div class="stack">'+termPicker()+'<section class="card"><div class="st-public-cal-head"><h2>Wochenplan</h2><div class="st-public-month-nav"><button type="button" class="secondary" data-week-prev '+prevDisabled+'>←</button><strong>'+date(days[0])+' – '+date(days[6])+'</strong><button type="button" class="secondary" data-week-next '+nextDisabled+'>→</button></div></div>'+info('Termine erscheinen nur, wenn sie ausdrücklich freigegeben wurden. Kein Bearbeiten im Lesemodus.')+'<div class="st-public-week-scroll"><div class="planweek">'+cells+'</div></div></section><div class="list-grid"><section class="card"><h2>Aufgaben & Abgaben</h2>'+taskRows(tasks,'Keine freigegebenen Aufgaben.')+'</section><section class="card"><h2>Prüfungsvorbereitung</h2>'+taskRows(exams,'Keine freigegebenen Prüfungen.')+'</section></div>'+handbook()+'</div>';
+ }
  function history(){
  const days=Array.isArray(data?.by_day)?data.by_day:[];
  const rows=days.length?days.slice().reverse().map(d=>'<div class="entry"><strong>'+esc(d.date)+'</strong><strong>'+hr(safeHours(d.hours))+'</strong></div>').join(''):'<p class="sub">Noch keine Lerntage vorhanden.</p>';
  const summary='<div class="statsmini"><div><span class="sub">Gesamte Lernzeit</span><strong>'+hr(data?.summary?.hours)+'</strong></div><div><span class="sub">Lerneinheiten</span><strong>'+Number(data?.summary?.sessions||0)+'</strong></div><div><span class="sub">Aktive Lerntage</span><strong>'+days.filter(x=>safeHours(x.hours)>0).length+'</strong></div></div>';
- return '<div class="stack st-public-history"><section class="card st-public-chart-card">'+halfRing()+'</section>'+
+ return '<div class="stack st-public-history">'+info('Das öffentliche Lernprotokoll zeigt den freigegebenen Gesamtstand, nicht einzelne Semester.')+'<section class="card st-public-chart-card">'+halfRing()+'</section>'+
  '<div class="st-public-history-columns"><section class="card"><h2>Lerncopilot</h2>'+summary+'</section>'+
  '<section class="card"><h2>Lerntage</h2><div class="scroll-box">'+rows+'</div></section></div>'+workload()+'</div>';
 }
- function viewAllowed(tab){if(tab==='settings')return true;if(error)return Object.hasOwn(map,tab);return !!data?.fields?.includes(map[tab])||(tab==='planner'&&!!data?.fields?.includes('calendar'))}
- function render(){if(!document.body.classList.contains('st-auth-locked'))return;if(!viewAllowed(active))active=['dashboard','topics','semester','planner','history'].find(viewAllowed)||'settings';const el=$('publicView');if(active==='settings'){document.body.classList.remove('reader-browsing');$('publicView').hidden=true;document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('hidden',p.id!=='settings'));for(const b of document.querySelectorAll('.nav .tab')){b.hidden=b.dataset.tab==='practice'||b.dataset.tab==='files'||!viewAllowed(b.dataset.tab);b.classList.toggle('active',b.dataset.tab==='settings')}return};document.body.classList.add('reader-browsing');document.querySelectorAll('.tab-panel').forEach(p=>p.classList.add('hidden'));el.hidden=false;el.innerHTML=error?`<section class="card"><h2>Öffentliche Daten nicht geladen</h2><p>${esc(error)}</p><p class="sub">Du kannst die Reiter und das Layout testen, aber echte Lernzeiten und Termine sind in dieser lokalen Vorschau nicht abrufbar. Die private Cloud wird nicht geladen.</p><button type="button" class="secondary" id="readerRetry">Erneut versuchen</button></section>`:({dashboard:stats,topics:modules,semester:calendar,planner:planner,history:history}[active]?.()||'');for(const b of document.querySelectorAll('.nav .tab')){b.hidden=b.dataset.tab==='practice'||!viewAllowed(b.dataset.tab);b.classList.toggle('active',b.dataset.tab===active)}el.querySelector('#readerRetry')?.addEventListener('click',load);el.querySelector('#publicModule')?.addEventListener('change',e=>{selectedModule=e.target.value;render()});el.querySelector('[data-cal-prev]')?.addEventListener('click',()=>{monthOffset--;selected=iso(new Date(new Date().getFullYear(),new Date().getMonth()+monthOffset,1));render()});el.querySelector('[data-cal-next]')?.addEventListener('click',()=>{monthOffset++;selected=iso(new Date(new Date().getFullYear(),new Date().getMonth()+monthOffset,1));render()});el.querySelectorAll('[data-select-day]').forEach(b=>b.addEventListener('click',()=>{selected=b.dataset.selectDay;render()}));el.querySelector('[data-week-prev]')?.addEventListener('click',()=>{weekOffset--;render()});el.querySelector('[data-week-next]')?.addEventListener('click',()=>{weekOffset++;render()})}
- async function load(){try{let resp=await fetch(API+'/public/view',{cache:'no-store'});if(!resp.ok)throw Error(resp.status===404?'Öffentliche Freigabe nicht aktiviert':'Öffentliche Daten konnten nicht geladen werden ('+resp.status+')');data=await resp.json();error='';}catch(e){data={fields:[]};error=e.message;}render()}
- function open(){for(const b of document.querySelectorAll('.nav .tab')){b.hidden=b.dataset.tab==='practice'||!viewAllowed(b.dataset.tab)}render()}
- function close(){document.body.classList.remove('reader-browsing');$('publicView').hidden=true;for(const b of document.querySelectorAll('.nav .tab')){b.hidden=false}document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('hidden'))}
- function settings(){active='settings';render();for(const b of document.querySelectorAll('.nav .tab'))b.classList.toggle('active',b.dataset.tab==='settings')}
+ function viewAllowed(tab){
+  if(tab==='settings')return true;
+  if(['topics','semester','planner'].includes(tab))return true; // Static public handbook.
+  if(error)return false;
+  return !!data?.fields?.includes(map[tab]);
+ }
+ function render(){
+  if(!document.body.classList.contains('st-auth-locked'))return;
+  if(!viewAllowed(active))active=['semester','topics','planner','dashboard','history'].find(viewAllowed)||'settings';
+  const el=$('publicView');
+  if(active==='settings'){
+   document.body.classList.remove('reader-browsing');el.hidden=true;
+   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('hidden',p.id!=='settings'));
+   for(const b of document.querySelectorAll('.nav .tab')){
+    b.hidden=b.dataset.tab==='practice'||b.dataset.tab==='files'||!viewAllowed(b.dataset.tab);
+    b.classList.toggle('active',b.dataset.tab==='settings');
+   }
+   return;
+  }
+  document.body.classList.add('reader-browsing');
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.add('hidden'));
+  el.hidden=false;
+  const pages={dashboard:stats,topics:modules,semester:calendar,planner,history};
+  const banner=error?'<section class="st-public-alert" role="status">Die private öffentliche Freigabe ist zurzeit nicht verfügbar: '+esc(error)+'. Der Modulhandbuch-Katalog bleibt unabhängig davon zugänglich. <button type="button" class="secondary" id="readerRetry">Erneut versuchen</button></section>':'';
+  el.innerHTML=banner+(pages[active]?.()||'');
+  for(const b of document.querySelectorAll('.nav .tab')){
+   b.hidden=b.dataset.tab==='practice'||b.dataset.tab==='files'||!viewAllowed(b.dataset.tab);
+   b.classList.toggle('active',b.dataset.tab===active);
+  }
+  el.querySelector('#readerRetry')?.addEventListener('click',load);
+  el.querySelector('#publicSemester')?.addEventListener('change',e=>setTerm(e.target.value));
+  el.querySelector('#publicModule')?.addEventListener('change',e=>{selectedModule=e.target.value;render()});
+  el.querySelector('#publicHandbookFilter')?.addEventListener('change',e=>{catalogFilter=e.target.value;render()});
+  el.querySelector('[data-cal-prev]')?.addEventListener('click',()=>{if(monthOffset>0){monthOffset--;selected=iso(new Date(Number(term().start.slice(0,4)),Number(term().start.slice(5,7))-1+monthOffset,1));render()}});
+  el.querySelector('[data-cal-next]')?.addEventListener('click',()=>{if(monthOffset<5){monthOffset++;selected=iso(new Date(Number(term().start.slice(0,4)),Number(term().start.slice(5,7))-1+monthOffset,1));render()}});
+  el.querySelectorAll('[data-select-day]').forEach(b=>b.addEventListener('click',()=>{selected=b.dataset.selectDay;render()}));
+  el.querySelector('[data-week-prev]')?.addEventListener('click',()=>{weekOffset--;render()});
+  el.querySelector('[data-week-next]')?.addEventListener('click',()=>{weekOffset++;render()});
+ }
+ async function load(){
+  try{
+   const resp=await fetch(API+'/public/view',{cache:'no-store'});
+   if(!resp.ok)throw Error(resp.status===404?'nicht aktiviert':'Serverantwort '+resp.status);
+   const body=await resp.json();
+   if(!body||!Array.isArray(body.fields))throw Error('Unerwartetes öffentliches Datenformat');
+   data=body;error='';
+  }catch(e){data={fields:[]};error=e.message}
+  render();
+ }
+ function open(){render()}
+ function close(){
+  document.body.classList.remove('reader-browsing');$('publicView').hidden=true;
+  for(const b of document.querySelectorAll('.nav .tab'))b.hidden=false;
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('hidden'));
+ }
+ function settings(){active='settings';render()}
  function tab(t){if(!viewAllowed(t))return;active=t;render()}
  window.studyReader={open,close,settings,tab};
  load();
