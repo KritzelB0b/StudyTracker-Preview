@@ -1,66 +1,140 @@
 'use strict';
 /* Source: THM/ZDH Modulhandbuch Ingenieurwesen Maschinenbau, Version 8,
    Prüfungsordnung 2016, Änderungsfassung 11.12.2024.
-   Semesterzuordnungen follow the stated "Studiensemester" field.
-   Multiple semesters are alternatives/overlapping periods, not duplicate workload.
-   This is a planning catalog, not a class timetable. */
+   Semesterzuordnungen folgen den fachrichtungsspezifischen offiziellen
+   Studienverlaufsplänen von StudiumPlus, nicht den allgemeinen Angebotsangaben
+   einzelner Modulbeschreibungen. Wahlmodule bleiben freiwillig. */
 (function(){
 const CATALOG=[{"code":"6002","name":"Allgemeine BWL und Recht für Ingenieure","semesterText":"7. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Pflicht","termNumbers":[7]},{"code":"4005","name":"Automatisierungs- und Regelungstechnik","semesterText":"4. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Pflicht","termNumbers":[4]},{"code":"7011","name":"Bachelor-Kolloquium","semesterText":"7. Semester","ects":3,"total":75,"presence":5,"self":70,"type":"Pflicht","termNumbers":[7]},{"code":"7010","name":"Bachelor-Thesis","semesterText":"7. Semester","ects":12,"total":300,"presence":10,"self":290,"type":"Pflicht","termNumbers":[7]},{"code":"8002","name":"Betriebsethik","semesterText":"3. Semester","ects":4,"total":100,"presence":50,"self":50,"type":"Pflicht","termNumbers":[3]},{"code":"8000","name":"Coaching-Selbstkompetenz","semesterText":"1. + 2. Semester","ects":4,"total":100,"presence":50,"self":50,"type":"Pflicht","termNumbers":[1,2]},{"code":"3003","name":"Elektrotechnik für Maschinenbau","semesterText":"2. / 7. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Pflicht","termNumbers":[2,7]},{"code":"3008","name":"Englisch","semesterText":"4. Semester (Blockmodul)","ects":4,"total":100,"presence":50,"self":50,"type":"Pflicht","termNumbers":[4]},{"code":"4003","name":"Fluidmechanik","semesterText":"4. Semester","ects":6,"total":150,"presence":50,"self":100,"type":"Pflicht","termNumbers":[4]},{"code":"4006","name":"Hygiene Design","semesterText":"4. Semester","ects":6,"total":150,"presence":50,"self":100,"type":"Pflicht","termNumbers":[4]},{"code":"4008","name":"Hygienische Prozesstechnik und Gebäudeausstattung","semesterText":"3. Semester","ects":7,"total":175,"presence":74,"self":101,"type":"Pflicht","termNumbers":[3]},{"code":"3002","name":"Informatik 1","semesterText":"7. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Pflicht","termNumbers":[7]},{"code":"3009","name":"Kältetechnik 1","semesterText":"3. Semester","ects":6,"total":150,"presence":74,"self":76,"type":"Pflicht","termNumbers":[3]},{"code":"6005","name":"Klimatechnik","semesterText":"7. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Pflicht","termNumbers":[7]},{"code":"2007","name":"Konstruktion / CAD","semesterText":"1. Semester","ects":6,"total":150,"presence":74,"self":76,"type":"Pflicht","termNumbers":[1]},{"code":"2004","name":"Maschinenelemente 1","semesterText":"3. Semester","ects":6,"total":150,"presence":74,"self":76,"type":"Pflicht","termNumbers":[3]},{"code":"3004","name":"Maschinenelemente 2","semesterText":"4. Semester","ects":7,"total":175,"presence":74,"self":101,"type":"Pflicht","termNumbers":[4]},{"code":"4007","name":"Maschinensicherheit","semesterText":"3. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Pflicht","termNumbers":[3]},{"code":"1001","name":"Mathematik für Ingenieure 1","semesterText":"1. Semester","ects":6,"total":150,"presence":74,"self":76,"type":"Pflicht","termNumbers":[1]},{"code":"2001","name":"Mathematik für Ingenieure 2","semesterText":"2. Semester","ects":6,"total":150,"presence":74,"self":76,"type":"Pflicht","termNumbers":[2]},{"code":"1002","name":"Naturwissenschaften 1","semesterText":"1. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Pflicht","termNumbers":[1]},{"code":"2002","name":"Naturwissenschaften 2","semesterText":"2. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Pflicht","termNumbers":[2]},{"code":"1000","name":"Praxisphase 1","semesterText":"1./2. Semester","ects":3,"total":75,"presence":10,"self":65,"type":"Pflicht","termNumbers":[1,2]},{"code":"2000","name":"Praxisphase 2","semesterText":"2./3. Semester","ects":3,"total":75,"presence":10,"self":65,"type":"Pflicht","termNumbers":[2,3]},{"code":"3000","name":"Praxisphase 3","semesterText":"3./4. Semester","ects":4,"total":100,"presence":10,"self":90,"type":"Pflicht","termNumbers":[3,4]},{"code":"8004","name":"Projektmanagement","semesterText":"4. Semester (Blockmodul)","ects":5,"total":125,"presence":50,"self":75,"type":"Pflicht","termNumbers":[4]},{"code":"6000","name":"Projektstudium","semesterText":"6. Semester","ects":32,"total":800,"presence":80,"self":720,"type":"Pflicht","termNumbers":[6]},{"code":"8001","name":"Sozialkompetenz","semesterText":"4. oder 5. Semester","ects":4,"total":100,"presence":50,"self":50,"type":"Pflicht","termNumbers":[4,5]},{"code":"1003","name":"Technische Mechanik 1","semesterText":"1. Semester","ects":6,"total":150,"presence":74,"self":76,"type":"Pflicht","termNumbers":[1]},{"code":"2003","name":"Technische Mechanik 2","semesterText":"2. Semester","ects":6,"total":150,"presence":74,"self":76,"type":"Pflicht","termNumbers":[2]},{"code":"1004","name":"Fertigungstechnik","semesterText":"2. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Pflicht","termNumbers":[2]},{"code":"4004","name":"Technische Mechanik 3","semesterText":"3. Semester","ects":6,"total":150,"presence":50,"self":100,"type":"Pflicht","termNumbers":[3]},{"code":"3001","name":"Thermodynamik","semesterText":"3. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Pflicht","termNumbers":[3]},{"code":"3010","name":"Transformationen für Maschinenbau","semesterText":"3. Semester","ects":7,"total":175,"presence":74,"self":101,"type":"Pflicht","termNumbers":[3]},{"code":"3006","name":"Verfahren der Formgebung","semesterText":"3. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Pflicht","termNumbers":[3]},{"code":"1005","name":"Werkstofftechnik","semesterText":"1. Semester","ects":5,"total":125,"presence":62,"self":63,"type":"Pflicht","termNumbers":[1]},{"code":"6008","name":"Alternative Energien","semesterText":"5. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Wahlpflicht","termNumbers":[5]},{"code":"4504","name":"CAX-Technologie","semesterText":"5./7. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Wahlpflicht","termNumbers":[5,7]},{"code":"7058","name":"Fahrzeugtechnik","semesterText":"5. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Wahlpflicht","termNumbers":[5]},{"code":"6003","name":"Finite Elemente","semesterText":"5./7. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Wahlpflicht","termNumbers":[5,7]},{"code":"6006","name":"Integrierte Heiz- und Kühlsysteme","semesterText":"5. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Wahlpflicht","termNumbers":[5]},{"code":"5038","name":"Konstruktionsmethodik","semesterText":"5. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Wahlpflicht","termNumbers":[5]},{"code":"7028","name":"Kunststofftechnik","semesterText":"5. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Wahlpflicht","termNumbers":[5]},{"code":"6007","name":"Rapid Prototyping","semesterText":"5. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Wahlpflicht","termNumbers":[5]},{"code":"7075","name":"Robotik und Automatisierungstechnik","semesterText":"5. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Wahlpflicht","termNumbers":[5]},{"code":"4503","name":"Werkstoffe der Formgebung","semesterText":"4. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Wahlpflicht","termNumbers":[4]},{"code":"4502","name":"Werkzeuge und Fügetechnik der Formgebung","semesterText":"4. Semester","ects":7,"total":175,"presence":72,"self":103,"type":"Wahlpflicht","termNumbers":[4]},{"code":"7029","name":"Werkzeugmaschinen","semesterText":"5. Semester","ects":5,"total":125,"presence":50,"self":75,"type":"Wahlpflicht","termNumbers":[5]}];
+
 const $=id=>document.getElementById(id);
 const h=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const COMMON={
+ 1:['2007','1001','1003','1005','1002','8000','1000'],
+ 2:['2001','2003','1004','2002','8000','2000'],
+ 6:['6000']
+};
+const TRACKS={
+ allgemein:{label:'Allgemeiner Maschinenbau',url:'https://studiumplus.de/studiengaenge/ingenieurwesen-maschinenbau-2/ingenieurwesen-maschinenbau-allgemeiner-maschinenbau/',required:{
+ 3:['3010','2004','4004','3001','8002','3000'],
+ 4:['3004','4003','4005','8004','3008','8001'],
+ 7:['6002','3003','3002','7010','7011']},slots:{5:{wahlpflicht:5}}},
+ formgebung:{label:'Formgebung',url:'https://studiumplus.de/studiengaenge/ingenieurwesen-maschinenbau-2/ingenieurwesen-maschinenbau-formgebung/',required:{
+ 3:['3010','2004','3006','3001','8002','3000'],
+ 4:['3004','8004','3008','8001'],
+ 7:['6002','3002','7010','7011']},slots:{4:{wahl:2},5:{wahlpflicht:5},7:{wahl:1}}},
+ hygiene:{label:'Hygiene Design',url:'https://studiumplus.de/studiengaenge/ingenieurwesen-maschinenbau-2/ingenieurwesen-maschinenbau-hygiene-design/',required:{
+ 3:['4008','2004','4007','3001','8002','3000'],
+ 4:['3004','4003','4006','8004','3008','8001'],
+ 7:['6002','3003','3002','7010','7011']},slots:{5:{wahlpflicht:5}}},
+ kaelte:{label:'Kälte- und Klimatechnik',url:'https://studiumplus.de/studiengaenge/ingenieurwesen-maschinenbau-2/ingenieurwesen-maschinenbau-kaelte-und-klimatechnik/',required:{
+ 3:['3010','2004','3009','3001','8002','3000'],
+ 4:['3004','4003','4005','8004','3008','8001'],
+ 7:['6002','6005','3002','7010','7011']},slots:{5:{wahlpflicht:5}}}
+};
+const codes=new Map(CATALOG.map(m=>[m.code,m]));
+for(const [key,path] of Object.entries(TRACKS))for(let term=1;term<=7;term++){
+ const required=COMMON[term]||path.required[term]||[];
+ for(const code of required)if(!codes.has(code))throw Error('Modulcode fehlt im Handbuch: '+key+' '+term+' '+code);
+}
+let pathway='';
+const studyTermNumber=()=>SEMESTERS.findIndex(t=>t.id===activeTermId())+1;
+function getOverview(number,key=pathway){
+ const track=TRACKS[key];
+ const required=track?(COMMON[number]||track.required[number]||[]):[];
+ return {selected:!!track,track:key,label:track?.label||'',sourceUrl:track?.url||'',
+  required:required.map(code=>({...codes.get(code),displayName:code==='8000'?'Coaching-Selbstkompetenz · Teil '+number:codes.get(code).name,shared:code==='8000'})),
+  slots:track?.slots?.[number]||{},
+  candidates:track&&(track.slots?.[number]?.wahl||track.slots?.[number]?.wahlpflicht)
+   ?CATALOG.filter(x=>x.type==='Wahlpflicht'&&x.termNumbers.includes(number)):[]
+ };
+}
 function modulePresent(item){
  return db.modules.some(m=>m.handbookCode===item.code||
-   (m.name.trim().toLowerCase()===item.name.toLowerCase() &&
-     (m.semesterId||LEGACY_TERM)===activeTermId()));
+  (m.name?.trim().toLowerCase()===item.name.toLowerCase()&&
+   (m.semesterId||LEGACY_TERM)===activeTermId()));
 }
-function termCodeToNumber(){return SEMESTERS.findIndex(t=>t.id===activeTermId())+1}
 function importModule(item){
  if(modulePresent(item))return false;
  const plan=termPlan();
- const module={id:uid(),name:item.name,semesterId:activeTermId(),handbookCode:item.code,goal:0,color:colors[(db.modules.length)%colors.length]};
- db.modules.push(module);
- plan.modules??=[];
- if(!plan.modules.some(m=>m.handbookCode===item.code||m.localId===module.id))
-  plan.modules.push({id:'handbook-'+item.code,localId:module.id,handbookCode:item.code,
-    name:item.name,ects:item.ects,total:item.total,presence:item.presence,self:item.self,
-    source:'Modulhandbuch Version 8',semesterLabel:item.semesterText});
+ const m={id:uid(),name:item.name,semesterId:activeTermId(),handbookCode:item.code,goal:0,
+  color:colors[db.modules.length%colors.length]};
+ db.modules.push(m);plan.modules??=[];
+ if(!plan.modules.some(x=>x.localId===m.id))
+ plan.modules.push({id:'handbook-'+item.code,localId:m.id,handbookCode:item.code,
+  name:item.name,ects:item.ects,total:item.total,presence:item.presence,self:item.self,
+  source:'Modulhandbuch Version 8; Studienverlauf StudiumPlus',semesterLabel:activeTerm().label});
  return true;
 }
 function renderHandbook(){
  const root=$('handbookCatalog');if(!root)return;
- const n=termCodeToNumber();const catalog=CATALOG.filter(item=>item.termNumbers.includes(n));
- const core=catalog.filter(item=>item.type==='Pflicht'), electives=catalog.filter(item=>item.type==='Wahlpflicht');
- const requiredHere=core.filter(item=>item.termNumbers[0]===n);
- const exists=CATALOG.filter(modulePresent);
- const line=item=>{
-  const selected=modulePresent(item),otherTerm=item.termNumbers[0]!==n;
-  const meta=item.ects+' ECTS · '+item.total+' h gesamt · '+item.presence+' h Präsenz · '+item.self+' h Selbststudium';
-  const action=n===1?'':selected?'<span class="st-handbook-state">Bereits eingetragen</span>':
-    '<button type="button" class="secondary" data-handbook-add="'+h(item.code)+'" aria-label="'+h(item.name)+' als Modul hinzufügen">+ Übernehmen</button>';
-  return '<div class="st-handbook-row"><div><strong>'+h(item.name)+'</strong><div class="sub small">Modulcode '+h(item.code)+' · '+h(meta)+' · lt. Handbuch: '+h(item.semesterText)+(otherTerm?' (anderer Regelzeitraum möglich)':'')+'</div></div>'+action+'</div>';
- };
- let header='<div class="st-handbook-intro"><div><h3>Modulhandbuch · '+h(activeTerm().label)+'</h3><p class="sub">Verlässliche Planungsdaten aus Version 8: ECTS und Arbeitsaufwand. Keine erfundenen Vorlesungs- oder Prüfungstermine. Übernahme ergänzt nur fehlende Module.</p></div>';
- if(n>1)header+='<button type="button" class="primary" id="handbookImportRequired">Pflichtmodule übernehmen ('+requiredHere.filter(item=>!modulePresent(item)).length+')</button>';
- header+='</div>';
- const sections=section=>section.length?section.map(line).join(''):'<p class="sub">Keine Module in dieser Kategorie für das gewählte Semester.</p>';
- root.innerHTML=header+'<details class="st-handbook-details" open><summary>Pflichtmodule und semesterübergreifende Module ('+core.length+')</summary><div>'+sections(core)+'</div></details>'+
- '<details class="st-handbook-details"><summary>Wahlpflichtmodule – bitte nur deine tatsächliche Auswahl übernehmen ('+electives.length+')</summary><div>'+sections(electives)+'</div></details>'+
- '<p class="sub small">Hinweis: Module mit mehreren möglichen Semestern werden nicht doppelt gezählt. Die tatsächliche Fachrichtung, Wahlpflichtbelegung und Prüfungstermine müssen bei Bedarf mit dem Studienplan abgeglichen werden.</p>';
- const batch=$('handbookImportRequired');if(batch)batch.addEventListener('click',()=>{
-  const added=requiredHere.filter(importModule);
-  if(added.length){persist();notify(added.length+' Pflichtmodule aus dem Modulhandbuch übernommen')}
-  else notify('Alle verfügbaren Pflichtmodule sind bereits eingetragen');
+ const term=studyTermNumber(),overview=getOverview(term);
+ const options='<option value="">Fachrichtung auswählen …</option>'+
+  Object.entries(TRACKS).map(([id,x])=>'<option value="'+id+'" '+(id===pathway?'selected':'')+'>'+h(x.label)+'</option>').join('');
+ let html='<div class="st-handbook-intro"><div><h3>Studienverlaufsplan · '+h(activeTerm().label)+'</h3>'+
+  '<p class="sub">Semesterzuordnung nach dem offiziellen Studienverlaufsplan von StudiumPlus. ECTS und Arbeitsaufwand stammen aus dem THM-Modulhandbuch Version 8.</p></div></div>'+
+  '<div class="field"><label for="stPathway">Fachrichtung</label><select id="stPathway">'+options+'</select></div>';
+ if(!overview.selected){
+  root.innerHTML=html+'<p class="sub">Bitte zuerst deine Fachrichtung auswählen. Ohne diese Angabe können die Pflichtmodule ab dem 3. Semester falsch sein.</p>';
+ }else{
+  const exists=overview.required.filter(modulePresent),missing=overview.required.filter(m=>!modulePresent(m));
+  const row=m=>{
+   const label=m.shared?' · ein gemeinsames Modul für Semester 1 und 2':'';
+   const control=modulePresent(m)?'<span class="st-handbook-state">Bereits vorhanden</span>':
+    term===1?'<span class="small muted">Bisherige Module bleiben erhalten</span>':
+    '<button type="button" class="secondary" data-handbook-add="'+h(m.code)+'">+ Übernehmen</button>';
+   return '<div class="st-handbook-row"><div><strong>'+h(m.displayName)+
+    '</strong><div class="sub small">Modulcode '+h(m.code)+' · '+m.ects+' ECTS · '+m.total+' h Arbeitsaufwand · '+
+    m.presence+' h Präsenz · '+m.self+' h Selbststudium'+label+'</div></div>'+control+'</div>';
+  };
+  const slots=overview.slots,wahl=slots.wahl||0,wahlpflicht=slots.wahlpflicht||0;
+  const slotsText=[wahl?wahl+' Wahlmodul'+(wahl>1?'e':''):'',wahlpflicht?wahlpflicht+' Wahlpflichtmodul'+(wahlpflicht>1?'e':''):''].filter(Boolean).join(' · ');
+  html+='<p class="sub small">Fachrichtung: <strong>'+h(overview.label)+'</strong> · <a href="'+h(overview.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Offizieller Studienverlaufsplan</a></p>'+
+   '<details class="st-handbook-details" open><summary>Fest vorgesehene Module ('+overview.required.length+')</summary>'+
+   '<div>'+overview.required.map(row).join('')+'</div></details>';
+  if(term>1&&missing.length)html+='<button type="button" class="primary" id="handbookImportRequired">Fehlende Pflichtmodule übernehmen ('+missing.length+')</button>';
+  if(slotsText){
+   html+='<details class="st-handbook-details" open><summary>Individuelle Modulwahl ('+h(slotsText)+')</summary>'+
+   '<p class="sub small">Die Auswahl steht im Studienverlaufsplan ausdrücklich offen. Keines der folgenden Angebote wird automatisch als Pflichtmodul importiert.</p>'+
+   (overview.candidates.length?overview.candidates.map(m=>{
+    const control=modulePresent(m)?'<span class="st-handbook-state">Vorhanden</span>':
+    '<button type="button" class="secondary" data-handbook-add="'+h(m.code)+'">+ Als Wahlmodul übernehmen</button>';
+    return '<div class="st-handbook-row"><div><strong>'+h(m.name)+'</strong><div class="sub small">'+
+     h(m.code)+' · '+m.ects+' ECTS · '+m.total+' h gesamt · laut Modulbeschreibung '+h(m.semesterText)+
+     '</div></div>'+control+'</div>';
+   }).join(''):'<p class="sub small">Keine vollständig passenden Wahlangebote im bisherigen digitalen Katalog. Die Wahl erfolgt nach dem tatsächlichen Angebot.</p>')+
+   '</details>';
+  }
+  const imported=db.modules.filter(m=>(m.semesterId||LEGACY_TERM)===activeTermId()&&m.handbookCode);
+  const accepted=new Set([...overview.required.map(m=>m.code),...overview.candidates.map(m=>m.code)]);
+  const unlisted=imported.filter(m=>!accepted.has(m.handbookCode));
+  if(unlisted.length)html+='<p class="sub" role="status">Hinweis: '+unlisted.length+' früher übernommene Module sind in diesem Studienverlaufsplan nicht als feste Pflichtmodule aufgeführt ('+
+    unlisted.map(m=>h(m.name)).join(', ')+'). Sie bleiben zur Sicherheit unverändert. Bitte prüfe, ob es deine individuellen Wahlmodule sind.</p>';
+  html+='<p class="sub small">Die Wahlmöglichkeiten sind Angebotsbeispiele, kein verbindlicher Stunden- oder Prüfungsplan. Bei Änderungen der Fachrichtung werden deine gespeicherten Module und Lernzeiten nicht automatisch verschoben oder gelöscht.</p>';
+  root.innerHTML=html;
+  root.querySelector('#handbookImportRequired')?.addEventListener('click',()=>{
+   const added=missing.filter(importModule);
+   if(added.length){persist();notify(added.length+' fehlende Pflichtmodule übernommen')}
+  });
+  root.querySelectorAll('[data-handbook-add]').forEach(btn=>btn.addEventListener('click',()=>{
+   const item=codes.get(btn.dataset.handbookAdd);
+   if(item&&importModule(item)){persist();notify(item.name+' übernommen')}
+  }));
+ }
+ root.querySelector('#stPathway')?.addEventListener('change',e=>{
+  pathway=TRACKS[e.target.value]?e.target.value:'';
+  renderHandbook();
  });
- root.querySelectorAll('[data-handbook-add]').forEach(b=>b.addEventListener('click',()=>{
-  const item=CATALOG.find(x=>x.code===b.dataset.handbookAdd);
-  if(!item)return;
-  if(importModule(item)){persist();notify(item.name+' übernommen')}
-  else notify('Dieses Modul ist bereits vorhanden');
- }));
 }
-const oldRender=render;
-render=function(){oldRender();renderHandbook()};
+const previousRender=render;
+render=function(){previousRender();renderHandbook()};
 document.querySelectorAll('[data-tab="semester"]').forEach(b=>b.addEventListener('click',renderHandbook));
+window.studyHandbookCatalog={
+ modules:CATALOG.map(x=>({...x})),
+ tracks:Object.fromEntries(Object.entries(TRACKS).map(([key,x])=>[key,{label:x.label,url:x.url}])),
+ getOverview,getPathway:()=>pathway,
+ setPathway(value){pathway=TRACKS[value]?value:'';renderHandbook()},
+ refresh:renderHandbook
+};
 renderHandbook();
-window.studyHandbookCatalog={modules:CATALOG.map(x=>({...x})),refresh:renderHandbook};
 })();
