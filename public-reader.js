@@ -28,18 +28,32 @@
  const termNumber=()=>TERMS.findIndex(t=>t.id===termId)+1;
  const isLegacy=()=>termId===firstTerm;
  const canShow=field=>!!data?.fields?.includes(field);
- const publicHandbook=()=>Array.isArray(window.studyHandbookCatalog?.modules)?window.studyHandbookCatalog.modules:[];
- const catalog=()=>publicHandbook().filter(m=>m.termNumbers.includes(termNumber()));
- function termPicker(){return '<div class="st-public-term"><label for="publicSemester">Semester</label><select id="publicSemester" aria-label="Semester im Lesemodus auswählen">'+TERMS.map(t=>'<option value="'+esc(t.id)+'" '+(t.id===termId?'selected':'')+'>'+esc(t.label)+'</option>').join('')+'</select><span class="sub small">Öffentlicher Überblick aus Modulhandbuch Version 8</span></div>'}
+ const studyCatalog=()=>window.studyHandbookCatalog||null;
+ function termPicker(){return '<div class="st-public-term"><label for="publicSemester">Semester</label><select id="publicSemester" aria-label="Semester im Lesemodus auswählen">'+TERMS.map(t=>'<option value="'+esc(t.id)+'" '+(t.id===termId?'selected':'')+'>'+esc(t.label)+'</option>').join('')+'</select><span class="sub small">Öffentlicher Überblick aus Studienverlaufsplan und Modulhandbuch</span></div>'}
  function info(text){return '<p class="st-public-info">'+esc(text)+'</p>'}
  function handbook(){
-  const ms=catalog(),choices=ms.filter(m=>m.type==='Wahlpflicht'),regular=ms.filter(m=>m.type==='Pflicht');
-  const opts='<option value="">Alle Module ('+ms.length+')</option>'+ms.map(m=>'<option value="'+esc(m.code)+'" '+(catalogFilter===m.code?'selected':'')+'>'+esc(m.name)+'</option>').join('');
-  function part(items,title){const show=items.filter(m=>!catalogFilter||m.code===catalogFilter);
-   return '<section class="st-public-handbook-section"><h4>'+title+' ('+show.length+')</h4>'+(
-   show.length?show.map(m=>'<div class="st-public-handbook-row"><strong>'+esc(m.name)+'</strong><span class="sub small">Code '+esc(m.code)+' · '+m.ects+' ECTS · '+m.total+' h gesamt · '+m.presence+' h Präsenz · '+m.self+' h Selbststudium · laut Handbuch: '+esc(m.semesterText)+'</span></div>').join(''):'<p class="sub small">Keine passenden Module.</p>')+'</section>';
+  const cat=studyCatalog(),tracks=cat?.tracks||{},view=cat?.getOverview(termNumber());
+  const selector='<div class="field"><label for="publicPathway">Fachrichtung</label><select id="publicPathway"><option value="">Fachrichtung auswählen …</option>'+
+    Object.entries(tracks).map(([id,t])=>'<option value="'+esc(id)+'" '+(view?.track===id?'selected':'')+'>'+esc(t.label)+'</option>').join('')+'</select></div>';
+  const heading='<section class="card st-public-handbook"><div class="title-row"><div><h2>Studienverlaufsplan · '+esc(term().label)+'</h2><p class="sub">Pflichtmodule nach StudiumPlus, ECTS und Stundenwerte nach dem THM-Modulhandbuch Version 8.</p></div><span class="pill">Nur lesen</span></div>'+selector;
+  if(!view?.selected)return heading+'<p class="sub">Bitte die Fachrichtung auswählen, damit insbesondere das 3., 4. und 7. Semester korrekt zugeordnet werden.</p></section>';
+  const all=[...view.required,...view.candidates],filter='<div class="field"><label for="publicHandbookFilter">Modul filtern</label><select id="publicHandbookFilter"><option value="">Alle Module</option>'+
+   all.map(m=>'<option value="'+esc(m.code)+'" '+(catalogFilter===m.code?'selected':'')+'>'+esc(m.displayName||m.name)+'</option>').join('')+'</select></div>';
+  const row=m=>'<div class="st-public-handbook-row"><strong>'+esc(m.displayName||m.name)+'</strong><span class="sub small">'+
+   'Code '+esc(m.code)+' · '+m.ects+' ECTS · '+m.total+' h Gesamt · '+m.presence+' h Präsenz · '+m.self+' h Selbststudium'+
+   (m.shared?' · ein gemeinsames Modul über Semester 1 und 2':'')+'</span></div>';
+  const req=view.required.filter(m=>!catalogFilter||m.code===catalogFilter);
+  let body='<section class="st-public-handbook-section"><h4>Fest vorgesehene Module ('+req.length+')</h4>'+
+   (req.length?req.map(row).join(''):'<p class="sub">Keine passenden Pflichtmodule.</p>')+'</section>';
+  const count=(view.slots.wahl||0)+(view.slots.wahlpflicht||0);
+  if(count){
+   const offered=view.candidates.filter(m=>!catalogFilter||m.code===catalogFilter);
+   body+='<section class="st-public-handbook-section"><h4>Wahlmöglichkeiten ('+count+' Plätze)</h4>'+
+    '<p class="sub small">Im Plan sind '+(view.slots.wahl||0)+' Wahlmodule und '+(view.slots.wahlpflicht||0)+' Wahlpflichtmodule vorgesehen. Die folgenden Angebote sind keine zusätzlichen Pflichtmodule.</p>'+
+    (offered.map(row).join('')||'<p class="sub small">Keine vollständig passenden Wahlangebote im bisherigen Katalog.</p>')+'</section>';
   }
-  return '<section class="card st-public-handbook"><div class="title-row"><div><h2>Modulhandbuch · '+esc(term().label)+'</h2><p class="sub">Allgemeiner Modulkatalog – unabhängig von privaten Lerndaten. Mehrfach aufgeführte Semester bedeuten alternative Belegungszeiträume.</p></div><span class="pill">Nur lesen</span></div><div class="field"><label for="publicHandbookFilter">Modul filtern</label><select id="publicHandbookFilter">'+opts+'</select></div>'+part(regular,'Pflichtmodule')+part(choices,'Wahlpflichtangebote')+'<p class="sub small">Wahlpflichtmodule sind Angebote, nicht automatisch Teil deines individuellen Studienplans. Echte Stundenplan- und Prüfungstermine sind im Modulhandbuch nicht enthalten.</p></section>';
+  body+='<p class="sub small"><a href="'+esc(view.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Offizielle Semesterübersicht bei StudiumPlus</a> · Geplante Vorlesungen und Prüfungen sind nicht Bestandteil des Modulhandbuchs.</p>';
+  return heading+filter+body+'</section>';
  }
  function setTerm(id){if(!TERMS.some(t=>t.id===id))return;termId=id;monthOffset=0;weekOffset=0;selected=(iso(new Date())>=term().start&&iso(new Date())<=term().end)?iso(new Date()):term().start;selectedModule='';catalogFilter='';render()}
 
@@ -207,6 +221,7 @@
   el.querySelector('#readerRetry')?.addEventListener('click',load);
   el.querySelector('#publicSemester')?.addEventListener('change',e=>setTerm(e.target.value));
   el.querySelector('#publicModule')?.addEventListener('change',e=>{selectedModule=e.target.value;render()});
+  el.querySelector('#publicPathway')?.addEventListener('change',e=>{studyCatalog()?.setPathway(e.target.value);catalogFilter='';render()});
   el.querySelector('#publicHandbookFilter')?.addEventListener('change',e=>{catalogFilter=e.target.value;render()});
   el.querySelector('[data-cal-prev]')?.addEventListener('click',()=>{if(monthOffset>0){monthOffset--;selected=iso(new Date(Number(term().start.slice(0,4)),Number(term().start.slice(5,7))-1+monthOffset,1));render()}});
   el.querySelector('[data-cal-next]')?.addEventListener('click',()=>{if(monthOffset<5){monthOffset++;selected=iso(new Date(Number(term().start.slice(0,4)),Number(term().start.slice(5,7))-1+monthOffset,1));render()}});
