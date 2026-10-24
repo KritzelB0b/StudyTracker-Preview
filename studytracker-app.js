@@ -313,9 +313,13 @@ function semData(){const plan=termPlan(false);return plan&&Array.isArray(plan.mo
 function semModuleId(ref){const meta=semData()?.modules.find(m=>m.id===ref);return meta?.localId||null}
 function semTime(e){const a=e.start.split(':').map(Number),b=e.end.split(':').map(Number);return (b[0]*60+b[1])-(a[0]*60+a[1])}
 function drawSemester(){
- const study=semData();const rows=study?.modules||(activeTermId()===LEGACY_TERM?HANDBOOK_MODULES:[]);const term=activeTerm();if(!isTermDate(dayKey(semView))){semView=dateOf(term.start);semSelected=term.start}
+ const study=semData();let rows=study?.modules||(activeTermId()===LEGACY_TERM?HANDBOOK_MODULES:[]);
+ // Older imported study plans can omit Praxisphase 1; show it without modifying saved data.
+ if(activeTermId()===LEGACY_TERM&&!rows.some(m=>m.id==='s13_6'))
+  rows=[...rows,HANDBOOK_MODULES.find(m=>m.id==='s13_6')];
+ const term=activeTerm();if(!isTermDate(dayKey(semView))){semView=dateOf(term.start);semSelected=term.start}
  $('semStatus').textContent=study?`${study.events.length} Plantermine · ${rows.length} Studienmodule · ${term.label}.`:(activeTermId()===LEGACY_TERM?`Bereit zum Import: ${SCHEDULE.length} Plantermine und ${HANDBOOK_MODULES.length} Module.`:'Noch kein Stundenplan hinterlegt. Lege Module und Termine für dieses Semester separat an.');
- $('semWork').innerHTML=rows.map(m=>{let mins=sum(termEntries().filter(e=>e.moduleId===(m.localId||semModuleId(m.id))));const remainder=Math.max(0,(Number(m.self)||0)-mins/60);return `<tr><td>${esc(m.name)}</td><td>${m.ects}</td><td>${m.total} h</td><td>${m.presence} h</td><td>${m.self} h</td><td>${hr(mins)}</td><td>${fmt(remainder)} h</td></tr>`}).join('')||'<tr><td colspan="7">Noch keine Module für dieses Semester angelegt.</td></tr>';
+ $('semWork').innerHTML=rows.map(m=>{let mins=sum(termEntries().filter(e=>e.moduleId===(m.localId||semModuleId(m.id))));const remainder=Math.max(0,(Number(m.self)||0)-mins/60);const termCredits=m.id==='s13_5'?'2 (von 4 gesamt)':m.ects;return `<tr><td>${esc(m.name)}</td><td>${termCredits}</td><td>${m.total} h</td><td>${m.presence} h</td><td>${m.self} h</td><td>${hr(mins)}</td><td>${fmt(remainder)} h</td></tr>`}).join('')||'<tr><td colspan="7">Noch keine Module für dieses Semester angelegt.</td></tr>';
  $('semMonth').textContent=semView.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
  const year=semView.getFullYear(),month=semView.getMonth(),first=new Date(year,month,1),offset=(first.getDay()+6)%7;
  let html='';for(let i=0;i<42;i++){let d=new Date(year,month,1-offset+i),date=dayKey(d),events=(study?.events||[]).filter(e=>e.date===date),entries=termEntries().filter(e=>e.date===date),tasks=(study?.tasks||[]).filter(t=>t.date===date),here=d.getMonth()===month,within=isTermDate(date);
