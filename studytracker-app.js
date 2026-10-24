@@ -96,7 +96,71 @@ const lastDays=Array.from({length:7},(_,i)=>{const d=dateOf(today());d.setDate(d
 $('recentEntries').innerHTML=termEntries().length?sortEntries(termEntries()).slice(0,4).map(entryHtml).join(''):'<div class="empty">Noch keine Lerneinheiten erfasst. Starte deinen ersten Timer!</div>';
 }
 function sortEntries(a){return [...a].sort((x,y)=>((y.date||'')+' '+(y.createdAt||'')).localeCompare((x.date||'')+' '+(x.createdAt||'')))}
-function entryHtml(e){return `<div class="entry"><div><strong>${esc(getM(e.moduleId)?.name||'Gelöschtes Modul')}${getT(e.topicId)?' · '+esc(getT(e.topicId).name):''}</strong><div class="muted">${esc(dateOf(e.date).toLocaleDateString('de-DE'))}${e.note?' · '+esc(e.note):''}</div></div><div class="right"><strong>${hr(e.minutes)}</strong><button class="icon-button" title="Eintrag löschen" data-delete-entry="${esc(e.id)}">×</button></div></div>`}
+function entryHtml(e){return `<div class="entry"><div><strong>${esc(getM(e.moduleId)?.name||'Gelöschtes Modul')}${getT(e.topicId)?' · '+esc(getT(e.topicId).name):''}</strong><div class="muted">${esc(dateOf(e.date).toLocaleDateString('de-DE'))}${e.note?' · '+esc(e.note):''}</div></div><div class="right"><strong>${hr(e.minutes)}</strong><button class="icon-button st-entry-edit-button" type="button" title="Lerneinheit bearbeiten" aria-label="Lerneinheit bearbeiten" data-edit-entry="${esc(e.id)}">✎</button><button class="icon-button" type="button" title="Eintrag löschen" aria-label="Lerneinheit löschen" data-delete-entry="${esc(e.id)}">×</button></div></div>`}
+
+// Existing learning sessions are edited in place. IDs, timestamps and any extra
+// metadata are preserved so JSON backups and revision-aware cloud sync stay intact.
+let activeEntryEditId=null,entryEditBaseline=null;
+const entryEditFingerprint=e=>JSON.stringify(e);
+function editEntryTopics(selected=''){
+ const moduleId=$('stEntryEditModule').value,select=$('stEntryEditTopic');
+ select.innerHTML='<option value="">Kein Thema</option>'+db.topics.filter(t=>t.moduleId===moduleId)
+   .map(t=>'<option value="'+esc(t.id)+'">'+esc(t.parentId?'↳ '+t.name:t.name)+'</option>').join('');
+ if([...select.options].some(o=>o.value===selected))select.value=selected;
+}
+function openEditEntry(id){
+ if(document.body.classList.contains('st-auth-locked'))return;
+ const entry=db.entries.find(e=>e.id===id);
+ if(!entry)return notify('Lerneinheit nicht mehr vorhanden.');
+ if(!$('stEntryEditDialog')?.showModal)return;
+ activeEntryEditId=id;entryEditBaseline=entryEditFingerprint(entry);
+ $('stEntryEditDate').value=entry.date||today();
+ $('stEntryEditMinutes').value=String(entry.minutes??'');
+ const moduleSelect=$('stEntryEditModule');
+ moduleSelect.innerHTML=db.modules.map(m=>'<option value="'+esc(m.id)+'">'+esc(m.name)+'</option>').join('');
+ if(getM(entry.moduleId))moduleSelect.value=entry.moduleId;
+ else moduleSelect.insertAdjacentHTML('afterbegin','<option value="" selected>Modul wurde gelöscht – neues Modul auswählen</option>');
+ editEntryTopics(entry.topicId||'');
+ $('stEntryEditNote').value=entry.note||'';
+ $('stEntryEditError').textContent='';
+ $('stEntryEditDialog').showModal();
+}
+$('stEntryEditModule').addEventListener('change',()=>editEntryTopics());
+$('stEntryEditClose').addEventListener('click',()=>$('stEntryEditDialog').close());
+$('stEntryEditCancel').addEventListener('click',()=>$('stEntryEditDialog').close());
+$('stEntryEditDialog').addEventListener('close',()=>{activeEntryEditId=null;entryEditBaseline=null});
+document.addEventListener('click',event=>{
+ const btn=event.target.closest('button[data-edit-entry]');
+ if(btn)openEditEntry(btn.dataset.editEntry);
+});
+$('stEntryEditForm').addEventListener('submit',event=>{
+ event.preventDefault();
+ if(document.body.classList.contains('st-auth-locked')||!activeEntryEditId)return;
+ const entry=db.entries.find(e=>e.id===activeEntryEditId),error=$('stEntryEditError');
+ if(!entry||entryEditFingerprint(entry)!==entryEditBaseline){
+  error.textContent='Dieser Eintrag wurde zwischenzeitlich verändert. Bitte schließen und erneut öffnen, damit keine Cloud-Änderung überschrieben wird.';
+  return;
+ }
+ const date=$('stEntryEditDate').value,minutes=Number($('stEntryEditMinutes').value),
+  moduleId=$('stEntryEditModule').value,topicId=$('stEntryEditTopic').value,
+  note=$('stEntryEditNote').value.trim();
+ const parsedDate=new Date(date+'T12:00:00');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||Number.isNaN(parsedDate.getTime())||dayKey(parsedDate)!==date){
+  error.textContent='Bitte ein gültiges Datum auswählen.';return;
+ }
+ if(!Number.isInteger(minutes)||minutes<1||minutes>1440){
+  error.textContent='Bitte eine Dauer von 1 bis 1440 Minuten eingeben.';return;
+ }
+ if(!getM(moduleId)){error.textContent='Bitte ein vorhandenes Modul auswählen.';return}
+ if(topicId&&!db.topics.some(t=>t.id===topicId&&t.moduleId===moduleId)){
+  error.textContent='Das Thema gehört nicht zum ausgewählten Modul.';return;
+ }
+ if(note.length>160){error.textContent='Die Notiz darf höchstens 160 Zeichen haben.';return}
+ Object.assign(entry,{date,minutes,moduleId,topicId,note});
+ $('stEntryEditDialog').close();
+ persist();
+ notify('Lerneinheit aktualisiert und für Cloud-Synchronisierung vorgemerkt');
+});
 function drawTopics(){$('moduleList').innerHTML=termModules().map(m=>`<div class="module-row"><div><span class="module-name"><i class="dot" style="background:${safeColor(m.color)}"></i>${esc(m.name)}</span><span class="small muted">Wochenziel: ${fmt(m.goal)} h</span></div><div class="actions"><button class="icon-button" data-rename-module="${esc(m.id)}" title="Modul umbenennen">✎</button><button class="icon-button" data-edit-module="${esc(m.id)}" title="Wochenziel bearbeiten">Ziel</button><button class="icon-button" data-delete-module="${esc(m.id)}" title="Modul löschen">×</button></div></div>`).join('')||'<div class="empty">Noch keine Module.</div>';
 const filter=$('topicListModule').value,visible=termModules().filter(m=>!filter||m.id===filter),matched=db.topics.filter(t=>visible.some(m=>m.id===t.moduleId));$('topicCount').textContent=matched.length+' Themen';$('topicList').innerHTML=matched.length?visible.map(m=>{const a=db.topics.filter(t=>t.moduleId===m.id);return a.length?`<div style="margin-bottom:15px"><div class="module-name"><i class="dot" style="background:${safeColor(m.color)}"></i>${esc(m.name)}</div>${a.map(t=>`<div class="topic ${t.parentId?'topic-indent':''}"><div class="topic-top"><span class="topic-title">${t.parentId?'↳ ':''}${esc(t.name)}</span><span class="topic-tools"><span class="chip">${hr(sum(db.entries.filter(e=>e.topicId===t.id)))}</span><button class="icon-button" data-edit-topic="${esc(t.id)}" title="Thema umbenennen">✎</button><button class="icon-button" data-delete-topic="${esc(t.id)}" title="Thema löschen">×</button></span></div><div class="field" style="margin-top:10px"><label>Kenntnisstand</label><select data-mastery="${esc(t.id)}">${['Noch nicht begonnen','Unsicher','In Bearbeitung','Gut verstanden','Sicher beherrscht'].map((label,i)=>`<option value="${i}" ${t.mastery===i?'selected':''}>${label}</option>`).join('')}</select></div></div>`).join('')}</div>`:''}).join(''):'<div class="empty">Füge Themen hinzu und bewerte deinen Lernfortschritt.</div>'}
 function filteredEntries(moduleId,topicId,period){return sortEntries(termEntries()).filter(e=>(!moduleId||e.moduleId===moduleId)&&(!topicId||e.topicId===topicId)&&(period==='all'||(period==='week'?e.date>=startWeek()&&e.date<=today():e.date>=today().slice(0,7)+'-01'&&e.date<=today())))}
