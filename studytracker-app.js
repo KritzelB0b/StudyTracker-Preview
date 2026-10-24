@@ -160,7 +160,7 @@ function drawModuleDetail(){
  const previous=selectedDetailId||picker.value;picker.innerHTML=termModules().map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');
  selectedDetailId=termModules().some(m=>m.id===previous)?previous:termModules()[0]?.id||'';picker.value=selectedDetailId;
  const m=detailModule(),area=$('moduleDetail');if(!m){area.innerHTML='<div class="empty">Bitte zunächst ein Modul anlegen.</div>';return}
- const meta=termPlan(false)?.modules?.find(x=>x.localId===m.id);
+ const meta=termPlan(false)?.modules?.find(x=>x.localId===m.id)||(m.handbookCode==='8000'?db.study?.modules?.find(x=>x.localId===m.id):null);
  const learn=db.entries.filter(x=>x.moduleId===m.id),minutes=sum(learn);
  const topics=db.topics.filter(t=>t.moduleId===m.id),roots=topics.filter(t=>!t.parentId||!topics.some(p=>p.id===t.parentId));
  const tasks=(termPlan(false)?.tasks||[]).filter(t=>t.moduleId===m.id&&(!t.done||t.kind==='exam')).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,7);
@@ -329,7 +329,7 @@ $('semImport').addEventListener('click',()=>{
  if(!old){const aliases=[['mathematik','mathe'],['technische mechanik'],['werkstoff'],['naturwissenschaft'],['konstruktion'],['coaching']][i];old=termModules().find(x=>aliases.some(a=>x.name.toLowerCase().includes(a)));}
  if(!old){old={id:uid(),name:m.name,color:colors[i%colors.length],goal:4,semesterId:LEGACY_TERM};db.modules.push(old)}m.localId=old.id;
  }
- db.study=study;let added=0;for(const m of study.modules)added+=seedTopics(m.localId);persist();notify('Studienplan importiert · '+added+' Themen ergänzt');showTab('semester');
+ db.study={...studyRoot(),...study};let added=0;for(const m of study.modules)added+=seedTopics(m.localId);persist();notify('Studienplan importiert · '+added+' Themen ergänzt');showTab('semester');
 });
 $('semPrev').addEventListener('click',()=>{semView=new Date(semView.getFullYear(),semView.getMonth()-1,1);drawSemester()});
 $('semNext').addEventListener('click',()=>{semView=new Date(semView.getFullYear(),semView.getMonth()+1,1);drawSemester()});
