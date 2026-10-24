@@ -122,6 +122,21 @@ a{color:#f39146}a:hover{color:#ffb775}
 .btn-ghost.btn-icon span{display:block;line-height:1}
 @media(prefers-reduced-motion:reduce){.btn-ghost{transition:none}}
 </style><style id="st-copilot-theme">
+/* Desktop: stretch the right column to the bottom of the left column. */
+@media (min-width:901px){
+ #dashboard .main{align-items:stretch}
+ #dashboard .main > .stack:last-child{
+  display:flex;
+  flex-direction:column;
+  height:100%;
+  min-height:0;
+ }
+ #dashboard #copilotCard{
+  flex:1 1 auto;
+  align-self:stretch;
+  min-height:0;
+ }
+}
 .cp-summary{margin:0;padding:13px 15px!important;min-width:0;align-self:start}
 .cp-summary .title-row{margin-bottom:4px;gap:8px}
 .cp-summary h2{font-size:15px;margin:0}
