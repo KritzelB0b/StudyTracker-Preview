@@ -1,4 +1,4 @@
-import {navigateToPage} from './pdf-reader.js?v=6';
+import {navigateToPage} from './pdf-reader.js?v=7';
 
 const el=id=>document.getElementById(id);
 const ink=el('stPdfInk'),stage=el('stPdfStage'),root=el('stPdfReader');
