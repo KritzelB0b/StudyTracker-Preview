@@ -13,6 +13,7 @@
  const map={dashboard:'dashboard',topics:'modules',semester:'calendar',planner:'calendar',history:'cockpit'};
  const cats={exam:'Prüfung',lecture:'Vorlesung',exercise:'Übung',tutorial:'Tutorium',practical:'Praktikum',coaching:'Coaching',task:'Aufgabe',study:'Lernblock'};
  let data=null,active='dashboard',selected=iso(new Date()),selectedModule='',error='';
+ let lastPublicFetch=0,publicRequestId=0,publicRefreshedAt='';
  const TERMS=[
  {id:'ws-2026',label:'Wintersemester 2026/27',start:'2026-10-01',end:'2027-03-31'},
  {id:'ss-2027',label:'Sommersemester 2027',start:'2027-04-01',end:'2027-09-30'},
@@ -211,7 +212,10 @@
   el.hidden=false;
   const pages={dashboard:stats,topics:modules,semester:calendar,planner,history};
   const banner=error?'<section class="st-public-alert" role="status">Die private öffentliche Freigabe ist zurzeit nicht verfügbar: '+esc(error)+'. Der Modulhandbuch-Katalog bleibt unabhängig davon zugänglich. <button type="button" class="secondary" id="readerRetry">Erneut versuchen</button></section>':'';
-  el.innerHTML=banner+(pages[active]?.()||'');
+  const updated=publicRefreshedAt&&data?.fields?.length?
+   '<p class="st-public-updated" role="status">Freigegebene Cloud-Daten aktualisiert: '+esc(publicRefreshedAt)+'</p>':
+   '<p class="st-public-updated">Öffentlicher Studienverlaufsplan · persönliche Daten nur bei Freigabe sichtbar</p>';
+  el.innerHTML=banner+updated+(pages[active]?.()||'');
   for(const b of document.querySelectorAll('.nav .tab')){
    b.hidden=b.dataset.tab==='practice'||b.dataset.tab==='files'||!viewAllowed(b.dataset.tab);
    b.classList.toggle('active',b.dataset.tab===active);
@@ -226,17 +230,34 @@
   el.querySelector('[data-week-prev]')?.addEventListener('click',()=>{weekOffset--;render()});
   el.querySelector('[data-week-next]')?.addEventListener('click',()=>{weekOffset++;render()});
  }
- async function load(){
+ async function load(force=false){
+  // Opening/reloading the browser must always retrieve the current permission-scoped
+  // server projection. Foreground refresh is throttled to avoid redundant requests.
+  if(!force&&Date.now()-lastPublicFetch<5000)return;
+  lastPublicFetch=Date.now();
+  const current=++publicRequestId;
   try{
-   const resp=await fetch(API+'/public/view',{cache:'no-store'});
+   const resp=await fetch(API+'/public/view?fresh='+Date.now(),{cache:'no-store'});
    if(!resp.ok)throw Error(resp.status===404?'nicht aktiviert':'Serverantwort '+resp.status);
    const body=await resp.json();
    if(!body||!Array.isArray(body.fields))throw Error('Unerwartetes öffentliches Datenformat');
-   data=body;error='';
-  }catch(e){data={fields:[]};error=e.message}
+   if(current!==publicRequestId)return;
+   data=body;error='';publicRefreshedAt=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){
+   if(current!==publicRequestId)return;
+   data={fields:[]};error=e.message;publicRefreshedAt='';
+  }
   render();
  }
- function open(){render()}
+ function refreshIfVisitor(force=false){
+  if(document.body.classList.contains('st-auth-locked')&&!document.hidden)load(force);
+ }
+ window.addEventListener('focus',()=>refreshIfVisitor());
+ window.addEventListener('online',()=>refreshIfVisitor(true));
+ window.addEventListener('pageshow',event=>{if(event.persisted)refreshIfVisitor(true)});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshIfVisitor()});
+ document.addEventListener('st-public-settings-saved',()=>refreshIfVisitor(true));
+ function open(){render();load(true)}
  function close(){
   document.body.classList.remove('reader-browsing');$('publicView').hidden=true;
   for(const b of document.querySelectorAll('.nav .tab'))b.hidden=false;
