@@ -257,7 +257,7 @@
  window.addEventListener('pageshow',event=>{if(event.persisted)refreshIfVisitor(true)});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshIfVisitor()});
  document.addEventListener('st-public-settings-saved',()=>refreshIfVisitor(true));
- function open(){render()}
+ function open(){render();load(true)}
  function close(){
   document.body.classList.remove('reader-browsing');$('publicView').hidden=true;
   for(const b of document.querySelectorAll('.nav .tab'))b.hidden=false;
