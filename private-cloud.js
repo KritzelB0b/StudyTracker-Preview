@@ -1,4 +1,4 @@
-import {openCloudPdf} from './pdf-reader.js?v=6';
+import {openCloudPdf,linkCloudPdf} from './pdf-reader.js?v=7';
 const API='https://studytracker-privatefiles-api-test.up.railway.app';
 const $=id=>document.getElementById(id);
 const token=()=>sessionStorage.getItem('studytracker_test_cloud_token')||'';
@@ -189,6 +189,116 @@ async function removeFolder(item){
  catch(e){notice(e.message)}
 }
 let activeUpload=null;
+/* Persist pending PDF uploads locally so offline/network interruptions never silently discard them.
+   Uploading only happens for the signed-in owner and the separate test file account. */
+let pendingDbPromise=null,queuedUploading=false;
+function pendingDb(){
+ if(!pendingDbPromise)pendingDbPromise=new Promise((resolve,reject)=>{
+  const req=indexedDB.open('studytracker-preview-pending-pdfs-v1',1);
+  req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('uploads'))req.result.createObjectStore('uploads',{keyPath:'id'})};
+  req.onsuccess=()=>resolve(req.result);
+  req.onerror=()=>reject(req.error||Error('Lokale PDF-Warteschlange nicht verfügbar'));
+ });
+ return pendingDbPromise;
+}
+async function pendingAll(){
+ const db=await pendingDb();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction('uploads','readonly'),req=tx.objectStore('uploads').getAll();
+  req.onsuccess=()=>resolve(req.result.sort((a,b)=>a.created-b.created));
+  req.onerror=()=>reject(req.error);
+ });
+}
+async function pendingSave(record){
+ const db=await pendingDb();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction('uploads','readwrite');
+  tx.objectStore('uploads').put(record);
+  tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+ });
+}
+async function pendingDelete(id){
+ const db=await pendingDb();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction('uploads','readwrite');
+  tx.objectStore('uploads').delete(id);
+  tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+ });
+}
+async function pendingStatus(){
+ const el=$('cloudAutoQueueStatus');if(!el)return;
+ try{
+  const count=(await pendingAll()).length;
+  el.textContent=count?count+' PDF'+(count===1?'':'s')+' wartet/warten auf den Cloud-Upload. Dateien bleiben bis dahin lokal auf diesem Gerät.':'PDF-Uploads werden automatisch in der privaten Cloud gespeichert.';
+ }catch(e){el.textContent='PDF-Warteschlange nicht verfügbar – lokale Uploads bitte prüfen.'}
+}
+async function queueReaderPdf(file){
+ if(!file||!file.name.toLowerCase().endsWith('.pdf'))return;
+ if(file.size>125*1048576){notice('PDF über 125 MB: nur lokal geöffnet, nicht in die Cloud übernommen.');return}
+ const id=crypto.randomUUID?.()||String(Date.now())+'-'+Math.random();
+ try{
+  await pendingSave({id,file,filename:file.name,size:file.size,mime:file.type||'application/pdf',folderId:folder,created:Date.now()});
+  await pendingStatus();
+  notice(navigator.onLine?'PDF lokal geöffnet · Cloud-Upload wird automatisch gestartet.':'PDF lokal gespeichert · Upload beginnt automatisch nach Wiederherstellung der Verbindung.');
+  processPendingPdf();
+ }catch(e){notice('PDF lokal geöffnet, aber automatische Upload-Warteschlange konnte nicht gespeichert werden: '+e.message)}
+}
+async function processPendingPdf(){
+ if(queuedUploading||activeUpload||!enabled()||!navigator.onLine)return;
+ queuedUploading=true;let complete=false;
+ try{
+  const items=await pendingAll();
+  if(!items.length)return;
+  const item=items[0];
+  // Reuse a same-name, same-size PDF in the selected folder on repeated
+  // opens or after a lost server acknowledgement; never silently delete it.
+  const url='/private/documents'+(item.folderId?'?folder_id='+encodeURIComponent(item.folderId):'');
+  const existing=await(await request(url)).json();
+  const found=existing.find(d=>d.filename===item.filename&&d.size===item.size&&d.mime==='application/pdf');
+  let cloudId=found?.id;
+  if(!cloudId){
+   const params=new URLSearchParams({filename:item.filename});
+   if(item.folderId)params.set('folder_id',item.folderId);
+   const file=item.file;
+   cloudId=await new Promise((resolve,reject)=>{
+    const xhr=new XMLHttpRequest();activeUpload=xhr;
+    xhr.open('POST',API+'/private/documents?'+params);
+    xhr.setRequestHeader('Authorization','Bearer '+token());
+    xhr.setRequestHeader('Content-Type','application/pdf');
+    setUploadProgress(0,'PDF wird automatisch hochgeladen: '+item.filename);
+    xhr.upload.onprogress=e=>{
+     if(e.lengthComputable)setUploadProgress(Math.round(e.loaded/e.total*100),'PDF wird synchronisiert: '+Math.round(e.loaded/e.total*100)+' %');
+    };
+    xhr.onerror=()=>reject(Error('Netzwerkfehler'));
+    xhr.onabort=()=>reject(Error('Upload unterbrochen'));
+    xhr.onload=()=>{
+     if(xhr.status>=200&&xhr.status<300){try{resolve(JSON.parse(xhr.responseText).id)}catch(e){reject(e)}}
+     else reject(Error('HTTP '+xhr.status));
+    };
+    xhr.onloadend=()=>{if(activeUpload===xhr)activeUpload=null;$('cloudFileUpload').disabled=false;setUploadProgress(0,'',false)};
+    $('cloudFileUpload').disabled=true;
+    xhr.send(file);
+   });
+  }
+  await pendingDelete(item.id);complete=true;
+  await pendingStatus();
+  linkCloudPdf({name:item.filename,size:item.size},cloudId);
+  notice('PDF automatisch in der Test-Cloud gespeichert: '+item.filename);
+  if(document.querySelector('#files:not(.hidden)'))await refresh();
+ }catch(e){
+  notice('PDF wartet auf erneuten automatischen Upload: '+e.message+' · lokale Kopie bleibt erhalten.');
+ }finally{
+  queuedUploading=false;
+  if(complete)setTimeout(processPendingPdf,350);
+ }
+}
+document.addEventListener('st-pdf-local-selected',e=>queueReaderPdf(e.detail.file));
+window.addEventListener('online',processPendingPdf);
+window.addEventListener('focus',processPendingPdf);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)processPendingPdf()});
+setInterval(processPendingPdf,60000);
+pendingStatus();
+
 function setUploadProgress(value,message,visible=true){
  const bar=$('cloudUploadProgressBar'),region=$('cloudUploadProgress');
  if(region)region.hidden=!visible;
@@ -254,7 +364,7 @@ async function testLogin(mode){
  try{
   const response=await fetch(API+'/auth/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'studytracker-test@example.com',password})});
   if(!response.ok){const error=await response.json();throw Error(typeof error.detail==='string'?error.detail:'HTTP '+response.status)}
-  const data=await response.json();sessionStorage.setItem('studytracker_test_cloud_token',data.token);$('cloudTestPassword').value='';refreshFileAuth();await refresh();
+  const data=await response.json();sessionStorage.setItem('studytracker_test_cloud_token',data.token);$('cloudTestPassword').value='';refreshFileAuth();await refresh();processPendingPdf();
  }catch(e){notice('Anmeldung fehlgeschlagen: '+e.message)}
 }
 $('cloudTestRegister').addEventListener('click',()=>testLogin('register'));
@@ -275,4 +385,4 @@ $('cloudFolderCreate').addEventListener('click',createFolder);
 $('cloudFileUpload').addEventListener('click',upload);
 $('cloudFilesReload').addEventListener('click',refresh);
 $('cloudFileSearch').addEventListener('input',paint);
-document.querySelector('[data-tab="files"]').addEventListener('click',()=>{if(enabled())refresh()});
+document.querySelector('[data-tab="files"]').addEventListener('click',()=>{if(enabled()){refresh();processPendingPdf()}});
