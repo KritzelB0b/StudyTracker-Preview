@@ -94,14 +94,22 @@ async function openLocal(file,cloudId=null){
  const lib=await engine();const bytes=new Uint8Array(await file.arrayBuffer());documentPDF=await lib.getDocument({data:bytes}).promise;
  cloudDocumentId=cloudId;docKey='st-pdf-bookmarks-'+file.name+'-'+file.size;document.dispatchEvent(new CustomEvent('st-pdf-open',{detail:{key:file.name+'-'+file.size,cloudId}}));
  try{bookmarks=JSON.parse(localStorage.getItem(docKey)||'[]').filter(Number.isInteger)}catch{bookmarks=[]}
- outline=await documentPDF.getOutline()||[];workspace.hidden=false;g('stPdfFileLabel').textContent=file.name;g('stPdfClose').disabled=false;g('stPdfFullscreen').disabled=false;g('stPdfSearch').value='';g('stPdfOutlineSearch').value='';outlineView();drawBookmarks();await showPage(1);report((cloudId?'Cloud-PDF':'Lokale PDF')+' geöffnet · '+documentPDF.numPages+' Seiten · '+outline.length+' Hauptkapitel.');
- }catch(e){clearDocument();report('PDF konnte nicht geöffnet werden: '+e.message)}
+ outline=await documentPDF.getOutline()||[];workspace.hidden=false;g('stPdfFileLabel').textContent=file.name;g('stPdfClose').disabled=false;g('stPdfFullscreen').disabled=false;g('stPdfSearch').value='';g('stPdfOutlineSearch').value='';outlineView();drawBookmarks();await showPage(1);report((cloudId?'Cloud-PDF':'Lokale PDF')+' geöffnet · '+documentPDF.numPages+' Seiten · '+outline.length+' Hauptkapitel.');return true;
+ }catch(e){clearDocument();report('PDF konnte nicht geöffnet werden: '+e.message);return false}
 }
 function drawBookmarks(){
  const root=g('stPdfBookmarks');root.replaceChildren();for(const n of [...new Set(bookmarks)].sort((a,b)=>a-b)){const b=leaf('☆ Seite '+n,0,()=>showPage(n));root.append(b)}
 }
 function remember(){if(!documentPDF)return;bookmarks=bookmarks.includes(current)?bookmarks.filter(n=>n!==current):[...bookmarks,current];try{localStorage.setItem(docKey,JSON.stringify(bookmarks))}catch{}drawBookmarks();report(bookmarks.includes(current)?'Seite '+current+' gemerkt.':'Lesezeichen entfernt.');document.dispatchEvent(new CustomEvent('st-pdf-bookmarks-change',{detail:{bookmarks:[...bookmarks]}}))}
-input.addEventListener('change',e=>openLocal(e.target.files[0]));
+input.addEventListener('change',async e=>{
+ const file=e.target.files?.[0];if(!file)return;
+ const opened=await openLocal(file);
+ if(!opened)return;
+ // Upload in the background when a PDF was opened locally; the private-file
+ // connector queues it persistently and later links the current PDF for notes.
+ document.dispatchEvent(new CustomEvent('st-pdf-local-selected',{detail:{file}}));
+ e.target.value='';
+});
 g('stPdfClose').addEventListener('click',()=>{clearDocument();report('PDF geschlossen. Keine PDF-Datei wurde gespeichert oder hochgeladen.')});
 g('stPdfPrev').addEventListener('click',()=>showPage(current-1));g('stPdfNext').addEventListener('click',()=>showPage(current+1));
 g('stPdfPage').addEventListener('change',e=>showPage(e.target.value));
@@ -156,6 +164,13 @@ document.addEventListener('visibilitychange',()=>{if(!isOwner()&&documentPDF){cl
 document.querySelectorAll('.nav .tab').forEach(b=>b.addEventListener('click',()=>{if(!isOwner()&&documentPDF)clearDocument()}));
 
 export async function openCloudPdf(file,id){return openLocal(file,id)}
+export function linkCloudPdf(file,id){
+ if(!documentPDF||!id||cloudDocumentId||docKey!=='st-pdf-bookmarks-'+file.name+'-'+file.size)return false;
+ cloudDocumentId=id;
+ document.dispatchEvent(new CustomEvent('st-pdf-open',{detail:{key:file.name+'-'+file.size,cloudId:id}}));
+ report('PDF automatisch in der Cloud gespeichert · Anmerkungen werden synchronisiert.');
+ return true;
+}
 export function setCloudBookmarks(items){if(!documentPDF)return;bookmarks=[...new Set(items.filter(n=>Number.isInteger(n)&&n>=1&&n<=documentPDF.numPages))];try{localStorage.setItem(docKey,JSON.stringify(bookmarks))}catch{}drawBookmarks()}
 export function navigateToPage(n){return showPage(n)}
 export function getPdfPage(){return current}
