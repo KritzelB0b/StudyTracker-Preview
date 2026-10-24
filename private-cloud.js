@@ -191,7 +191,7 @@ async function removeFolder(item){
 let activeUpload=null;
 /* Persist pending PDF uploads locally so offline/network interruptions never silently discard them.
    Uploading only happens for the signed-in owner and the separate test file account. */
-let pendingDbPromise=null,queuedUploading=false;
+let pendingDbPromise=null,queuedUploading=false,activePendingId=null;
 const KNOWN_PDF_KEY='studytracker_preview_known_pdfs_v1';
 function knownPdfs(){try{return JSON.parse(localStorage.getItem(KNOWN_PDF_KEY)||'{}')}catch{return {}}}
 function rememberPdf(fingerprint,doc,folderId){
@@ -258,6 +258,10 @@ async function queueReaderPdf(file){
  const id=crypto.randomUUID?.()||String(Date.now())+'-'+Math.random();
  try{
   const fingerprint=await pdfFingerprint(file);
+  if((await pendingAll()).some(p=>p.fingerprint===fingerprint&&p.folderId===folder)){
+   notice('PDF ist bereits für die automatische Cloud-Synchronisierung vorgemerkt.');
+   processPendingPdf();return;
+  }
   await pendingSave({id,file,filename:file.name,size:file.size,mime:file.type||'application/pdf',fingerprint,folderId:folder,created:Date.now()});
   await pendingStatus();
   notice(navigator.onLine?'PDF lokal geöffnet · Cloud-Upload wird automatisch gestartet.':'PDF lokal gespeichert · Upload beginnt automatisch nach Wiederherstellung der Verbindung.');
@@ -270,7 +274,7 @@ async function processPendingPdf(){
  try{
   const items=await pendingAll();
   if(!items.length)return;
-  const item=items[0];
+  const item=items[0];activePendingId=item.id;
   // Link only if this particular PDF was previously uploaded by this browser.
   // Filename+size alone can describe different files and must not reuse notes.
   const url='/private/documents'+(item.folderId?'?folder_id='+encodeURIComponent(item.folderId):'');
@@ -311,7 +315,7 @@ async function processPendingPdf(){
  }catch(e){
   notice('PDF wartet auf erneuten automatischen Upload: '+e.message+' · lokale Kopie bleibt erhalten.');
  }finally{
-  queuedUploading=false;
+  queuedUploading=false;activePendingId=null;
   if(complete)setTimeout(processPendingPdf,350);
  }
 }
@@ -358,7 +362,15 @@ function upload(){
  function finish(success,message){if(activeUpload!==xhr)return;activeUpload=null;$('cloudFileUpload').disabled=false;setUploadProgress(success?100:0,message,false)}
  xhr.send(file);
 }
-$('cloudUploadCancel').addEventListener('click',()=>activeUpload?.abort());
+$('cloudUploadCancel').addEventListener('click',async()=>{
+ const queued=activePendingId;
+ activeUpload?.abort();
+ if(queued){
+  await pendingDelete(queued).catch(()=>{});
+  await pendingStatus();
+  notice('Automatischer PDF-Upload abgebrochen und aus der Warteschlange entfernt. Die Datei bleibt lokal im Reader.');
+ }
+});
 async function getFile(file){return (await request('/private/documents/'+encodeURIComponent(file.id))).blob()}
 async function openPdf(file){
  try{notice('PDF wird geladen …');const blob=await getFile(file);await openCloudPdf(new File([blob],file.filename,{type:'application/pdf'}),file.id);notice('PDF im Reader geöffnet.')}
