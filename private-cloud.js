@@ -266,20 +266,20 @@ async function pendingStatus(){
  }
 }
 async function queueReaderPdf(file){
- if(!file||!file.name.toLowerCase().endsWith('.pdf'))return;
- if(file.size>125*1048576){notice('PDF über 125 MB: nur lokal geöffnet, nicht in die Cloud übernommen.');return}
+ if(!file||(!file.name.toLowerCase().endsWith('.pdf')&&file.type!=='application/pdf'))return false;
+ if(file.size>125*1048576){notice('PDF über 125 MB: nur lokal geöffnet, nicht in die Cloud übernommen.');return false}
  const id=crypto.randomUUID?.()||String(Date.now())+'-'+Math.random();
  try{
   const fingerprint=await pdfFingerprint(file);
   if((await pendingAll()).some(p=>p.fingerprint===fingerprint&&p.folderId===folder)){
    notice('PDF ist bereits für die automatische Cloud-Synchronisierung vorgemerkt.');
-   processPendingPdf();return;
+   processPendingPdf();return true;
   }
   await pendingSave({id,file,filename:file.name,size:file.size,mime:file.type||'application/pdf',fingerprint,folderId:folder,created:Date.now()});
   await pendingStatus();
   notice(navigator.onLine?'PDF lokal geöffnet · Cloud-Upload wird automatisch gestartet.':'PDF lokal gespeichert · Upload beginnt automatisch nach Wiederherstellung der Verbindung.');
-  processPendingPdf();
- }catch(e){notice('PDF lokal geöffnet, aber automatische Upload-Warteschlange konnte nicht gespeichert werden: '+e.message)}
+  processPendingPdf();return true;
+ }catch(e){notice('PDF nicht automatisch vorgemerkt (z. B. zu wenig Speicherplatz): '+e.message);return false}
 }
 async function processPendingPdf(){
  if(queuedUploading||activeUpload||!enabled()||!navigator.onLine)return;
@@ -435,8 +435,12 @@ $('cloudFileInput').addEventListener('change',async event=>{
  if(!file)return;
  if(file.name.toLowerCase().endsWith('.pdf')||file.type==='application/pdf'){
   if(!enabled()){notice('Bitte zuerst im Test-Dateispeicher anmelden. Danach PDF erneut auswählen.');return}
-  event.target.value='';
-  await queueReaderPdf(file);
+  const queued=await queueReaderPdf(file);
+  if(queued)event.target.value='';
+  else if(navigator.onLine){
+   notice('PDF-Warteschlange nicht verfügbar. Direktupload wird versucht; die Datei bleibt bis zum Erfolg ausgewählt.');
+   upload();
+  }
  }else{
   notice('Datei ausgewählt. Für dieses Dateiformat bitte „Datei hochladen“ anklicken.');
  }
