@@ -476,7 +476,9 @@ document.addEventListener('st-preview-credentials',e=>{
  cloudActive=false;cloudBusy=false;cloudConflict=false;
  if(next){
   sessionStorage.setItem(TOKEN_KEY,next);
-  accessGate(true);cloudStatus('Testkonto angemeldet · Lern-Cloud wird abgeglichen …');
+  // Keep visitor mode until the server has verified the token and its current
+  // revision. Do not briefly show possibly stale local study data on login.
+  cloudStatus('Testkonto angemeldet · aktueller Cloud-Stand wird geladen …');
   cloudConnect();
  }else{
   sessionStorage.removeItem(TOKEN_KEY);
