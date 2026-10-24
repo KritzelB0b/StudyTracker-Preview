@@ -188,8 +188,12 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
 // Automatic revision-aware Preview sync. Never overwrite diverging local and cloud edits.
 const API='https://studytracker-privatefiles-api-test.up.railway.app';
 const TOKEN_KEY='studytracker_preview_study_token_v34';
+const TEST_OWNER_EMAIL='studytracker-test@example.com';
+const FILE_TOKEN_KEY='studytracker_test_cloud_token';
 const CHECKPOINT_KEY='studytracker_preview_last_synced_snapshot_v1';
-let cloudToken=sessionStorage.getItem(TOKEN_KEY)||'';
+let cloudToken=sessionStorage.getItem(TOKEN_KEY)||sessionStorage.getItem(FILE_TOKEN_KEY)||'';
+$('cloudEmail').value=TEST_OWNER_EMAIL;
+$('cloudEmail').readOnly=true;
 let cloudRevision=null,cloudBaseline=null,cloudActive=false,cloudBusy=false,cloudTimer=null,cloudConflict=false;
 const snapshot=()=>JSON.stringify({modules:db.modules,topics:db.topics,entries:db.entries,study:db.study||null});
 const cloudStatus=s=>{
@@ -232,7 +236,9 @@ function cloudPause(message){
 }
 function cloudExpire(){
  cloudToken='';cloudRevision=null;cloudActive=false;cloudConflict=false;
- sessionStorage.removeItem(TOKEN_KEY);accessGate(false);
+ sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(FILE_TOKEN_KEY);
+ document.dispatchEvent(new CustomEvent('st-preview-credentials',{detail:{token:null,source:'study'}}));
+ accessGate(false);
  cloudStatus('Anmeldung abgelaufen. Bitte erneut anmelden; lokale Daten bleiben erhalten.');cloudView();
 }
 function cloudApply(remote,revision){
@@ -256,7 +262,12 @@ async function cloudConnect(){
  if(!cloudToken||cloudBusy||cloudConflict||!navigator.onLine)return;
  cloudBusy=true;cloudView();let needsPush=false;
  try{
+  const tokenAtStart=cloudToken;
   const before=snapshot(),remote=await cloudRequest('/sync'),server=normalizedRemote(remote);
+  if(cloudToken!==tokenAtStart)return;
+  // A resumed test session is only allowed to reveal editor data after the
+  // server accepts its token. Never unlock the local editor for an expired token.
+  accessGate(true);
   if(snapshot()!==before){cloudStatus('Während des Ladens wurden lokale Daten geändert. Synchronisierung wird erneut geprüft.');return}
   const checkpoint=localStorage.getItem(CHECKPOINT_KEY);
   const freshBrowser=localStorage.getItem(KEY)===null;
@@ -264,7 +275,7 @@ async function cloudConnect(){
   else if(checkpoint!==null&&before===checkpoint){cloudApply(server,remote.revision)}
   else if(checkpoint!==null&&server===checkpoint){cloudCommit(remote.revision,server);needsPush=true}
   else if(freshBrowser||cloudEmpty(before)){cloudApply(server,remote.revision)}
-  else if(cloudEmpty(server)){cloudCommit(remote.revision,server);needsPush=true}
+  else if(cloudEmpty(server))cloudPause('Die Test-Cloud enthält noch keine Lernzeiten. Um ein versehentliches Kopieren lokaler Live-Daten zu verhindern, bitte einmalig prüfen, ob du deine lokalen Daten ausdrücklich in die Test-Cloud übernehmen möchtest.');
   else cloudPause('Einmaliger Abgleich nötig: lokale Daten und Cloud unterscheiden sich.');
  }catch(e){
   if(e.status===401)cloudExpire();
@@ -276,16 +287,22 @@ async function cloudConnect(){
 }
 async function cloudAuth(register){
  if(cloudBusy)return;
- const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value;
- if(!email||password.length<12){alert('Bitte gültige E-Mail und Passwort mit mindestens 12 Zeichen eingeben.');return}
+ const email=TEST_OWNER_EMAIL,password=$('cloudPassword').value;
+ if(password.length<12){alert('Bitte das Testkonto-Passwort mit mindestens 12 Zeichen eingeben (dasselbe wie im PDF-Dateispeicher).');return}
  cloudBusy=true;cloudView();cloudStatus('Anmeldung wird geprüft …');
  try{
   const result=await cloudRequest(register?'/auth/register':'/auth/login','POST',{email,password});
-  cloudToken=result.token;sessionStorage.setItem(TOKEN_KEY,cloudToken);$('cloudPassword').value='';
+  cloudToken=result.token;sessionStorage.setItem(TOKEN_KEY,cloudToken);
+  sessionStorage.setItem(FILE_TOKEN_KEY,cloudToken);
+  $('cloudPassword').value='';
   cloudActive=false;cloudRevision=null;cloudBaseline=null;cloudConflict=false;
   accessGate(true);
+  document.dispatchEvent(new CustomEvent('st-preview-credentials',{detail:{token:cloudToken,source:'study'}}));
  }catch(e){
-  cloudToken='';sessionStorage.removeItem(TOKEN_KEY);cloudStatus('Anmeldung fehlgeschlagen: '+e.message);
+  cloudToken='';sessionStorage.removeItem(TOKEN_KEY);
+  cloudStatus(e.status===401?'Testkonto-Anmeldung abgelehnt: Bitte das Passwort des separaten Test-Dateispeichers verwenden, nicht das Live-Passwort.':
+    e.status===429?'Zu viele Loginversuche. Bitte mindestens 15 Minuten warten, bevor du es erneut probierst.':
+    'Anmeldung fehlgeschlagen: '+e.message);
  }finally{
   cloudBusy=false;cloudView();
  }
@@ -362,13 +379,31 @@ $('cloudRegister').addEventListener('click',()=>cloudAuth(true));
 $('cloudLogout').addEventListener('click',async()=>{
  const previousToken=cloudToken;
  clearTimeout(cloudTimer);cloudActive=false;cloudConflict=false;cloudToken='';cloudRevision=null;cloudBaseline=null;
- sessionStorage.removeItem(TOKEN_KEY);accessGate(false);cloudView();
+ sessionStorage.removeItem(TOKEN_KEY);sessionStorage.removeItem(FILE_TOKEN_KEY);
+ document.dispatchEvent(new CustomEvent('st-preview-credentials',{detail:{token:null,source:'study'}}));
+ accessGate(false);cloudView();
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),6000);
  let revoked=false;
  try{
   if(previousToken){const result=await fetch(API+'/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+previousToken},signal:controller.signal});revoked=result.ok}
  }catch(e){}finally{clearTimeout(timeout)}
  cloudStatus(revoked?'Abgemeldet · Serversitzung widerrufen; lokale Daten bleiben erhalten.':'Lokal abgemeldet · Serverwiderruf nicht bestätigt. Daten bleiben lokal erhalten.');
+});
+document.addEventListener('st-preview-credentials',e=>{
+ if(e.detail?.source!=='files')return;
+ const next=e.detail.token||'';
+ if(next===cloudToken&&(!next||cloudActive))return;
+ clearTimeout(cloudTimer);cloudToken=next;cloudRevision=null;cloudBaseline=null;
+ cloudActive=false;cloudBusy=false;cloudConflict=false;
+ if(next){
+  sessionStorage.setItem(TOKEN_KEY,next);
+  accessGate(true);cloudStatus('Testkonto angemeldet · Lern-Cloud wird abgeglichen …');
+  cloudConnect();
+ }else{
+  sessionStorage.removeItem(TOKEN_KEY);
+  accessGate(false);cloudStatus('Abgemeldet · lokale Lernzeiten bleiben erhalten.');
+ }
+ cloudView();
 });
 $('cloudUpload').addEventListener('click',cloudManualUpload);
 $('cloudDownload').addEventListener('click',cloudPull);
@@ -377,7 +412,7 @@ window.addEventListener('online',()=>{if(cloudToken&&!cloudConflict){if(cloudAct
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cloudToken&&!cloudConflict)cloudCheck()});
 window.addEventListener('focus',()=>{if(cloudToken&&!cloudConflict)cloudCheck()});
 setInterval(()=>{if(cloudToken&&!cloudConflict)cloudCheck()},45000);
-if(cloudToken)cloudConnect();
+if(cloudToken){sessionStorage.setItem(FILE_TOKEN_KEY,cloudToken);cloudConnect()}
 cloudView();
 if('serviceWorker' in navigator && location.protocol==='https:')Promise.resolve();
 

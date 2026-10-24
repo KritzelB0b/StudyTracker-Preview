@@ -412,19 +412,44 @@ async function testLogin(mode){
  try{
   const response=await fetch(API+'/auth/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'studytracker-test@example.com',password})});
   if(!response.ok){const error=await response.json();throw Error(typeof error.detail==='string'?error.detail:'HTTP '+response.status)}
-  const data=await response.json();sessionStorage.setItem('studytracker_test_cloud_token',data.token);$('cloudTestPassword').value='';refreshFileAuth();await refresh();processPendingPdf();
+  const data=await response.json();
+  sessionStorage.setItem('studytracker_test_cloud_token',data.token);
+  sessionStorage.setItem('studytracker_preview_study_token_v34',data.token);
+  document.dispatchEvent(new CustomEvent('st-preview-credentials',{detail:{token:data.token,source:'files'}}));
+  $('cloudTestPassword').value='';
+  refreshFileAuth();await refresh();processPendingPdf();
  }catch(e){notice('Anmeldung fehlgeschlagen: '+e.message)}
 }
 $('cloudTestRegister').addEventListener('click',()=>testLogin('register'));
 $('cloudTestLogin').addEventListener('click',()=>testLogin('login'));
 function refreshFileAuth(){$('cloudTestLogout').hidden=!token();pendingStatus()}
+document.addEventListener('st-preview-credentials',event=>{
+ if(event.detail?.source!=='study')return;
+ const newToken=event.detail.token;
+ if(newToken){
+  sessionStorage.setItem('studytracker_test_cloud_token',newToken);
+  refreshFileAuth();refresh();processPendingPdf();
+ }else{
+  sessionStorage.removeItem('studytracker_test_cloud_token');
+  folder=null;folders=[];files=[];paint();refreshFileAuth();
+  notice('Test-Datei-Cloud abgemeldet. Lokale PDF-Warteschlange bleibt erhalten.');
+ }
+});
 $('cloudTestLogout').addEventListener('click',async()=>{
- const oldToken=token();sessionStorage.removeItem('studytracker_test_cloud_token');
+ const oldToken=token(),studyToken=sessionStorage.getItem('studytracker_preview_study_token_v34')||'';
+ sessionStorage.removeItem('studytracker_test_cloud_token');
+ sessionStorage.removeItem('studytracker_preview_study_token_v34');
+ document.dispatchEvent(new CustomEvent('st-preview-credentials',{detail:{token:null,source:'files'}}));
  folder=null;folders=[];files=[];paint();refreshFileAuth();
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),6000);
  let revoked=false;
- try{if(oldToken){const response=await fetch(API+'/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+oldToken},signal:controller.signal});revoked=response.ok}}
- catch(e){}finally{clearTimeout(timeout)}
+ try{
+  const tokens=[...new Set([oldToken,studyToken].filter(Boolean))];
+  if(tokens.length){
+   const results=await Promise.all(tokens.map(t=>fetch(API+'/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+t},signal:controller.signal})));
+   revoked=results.every(r=>r.ok);
+  }
+ }catch(e){}finally{clearTimeout(timeout)}
  notice(revoked?'Test-Datei-Cloud abgemeldet. Sitzung auf dem Server widerrufen.':'Datei-Cloud lokal abgemeldet. Serverwiderruf nicht bestätigt; bereits heruntergeladene lokale Daten bleiben bestehen.');
 });
 refreshFileAuth();
