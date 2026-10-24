@@ -324,7 +324,7 @@ function cloudEmpty(raw){
 }
 async function cloudConnect(){
  if(!cloudToken||cloudBusy||cloudConflict||!navigator.onLine)return;
- cloudBusy=true;cloudView();let needsPush=false;
+ cloudBusy=true;cloudView();let needsPush=false,needsReconnect=false;
  try{
   const tokenAtStart=cloudToken;
   const before=snapshot(),remote=await cloudRequest('/sync'),server=normalizedRemote(remote);
@@ -332,7 +332,10 @@ async function cloudConnect(){
   // A resumed test session is only allowed to reveal editor data after the
   // server accepts its token. Never unlock the local editor for an expired token.
   accessGate(true);
-  if(snapshot()!==before){cloudStatus('Während des Ladens wurden lokale Daten geändert. Synchronisierung wird erneut geprüft.');return}
+  if(snapshot()!==before){
+   cloudStatus('Während des Ladens wurden lokale Daten geändert. Synchronisierung wird erneut geprüft.');
+   needsReconnect=true;return;
+  }
   const checkpoint=localStorage.getItem(CHECKPOINT_KEY);
   const freshBrowser=localStorage.getItem(KEY)===null;
   if(before===server){cloudCommit(remote.revision,before);cloudStatus('Automatisch verbunden ✓ · Daten sind aktuell')}
@@ -347,6 +350,7 @@ async function cloudConnect(){
  }finally{
   cloudBusy=false;cloudView();
   if(needsPush&&cloudActive)cloudChanged();
+  if(needsReconnect&&cloudToken&&!cloudConflict)setTimeout(()=>cloudConnect(),0);
  }
 }
 async function cloudAuth(register){
@@ -373,7 +377,12 @@ async function cloudAuth(register){
  if(cloudToken)await cloudConnect();
 }
 function cloudChanged(){
- if(!cloudToken||!cloudActive||cloudConflict)return;
+ if(!cloudToken||cloudConflict)return;
+ if(!cloudActive){
+  // Local changes remain durable until the first safe cloud revision is known.
+  if(!navigator.onLine)cloudStatus('Offline · Änderungen lokal gespeichert; Abgleich nach Wiederverbindung.');
+  return;
+ }
  if(snapshot()===cloudBaseline)return;
  clearTimeout(cloudTimer);
  if(!navigator.onLine){cloudStatus('Offline · Änderungen lokal gesichert; Upload beim nächsten Verbindungsaufbau.');return}
@@ -381,7 +390,13 @@ function cloudChanged(){
  cloudTimer=setTimeout(()=>cloudPush(false),1200);
 }
 async function cloudPush(explicit=false){
- if(cloudBusy||!cloudToken||cloudRevision===null||cloudConflict||(!explicit&&!cloudActive))return;
+ if(!cloudToken||cloudRevision===null||cloudConflict||(!explicit&&!cloudActive))return;
+ // Never drop an autosave if a GET/check is running during the debounce window.
+ if(cloudBusy){
+  clearTimeout(cloudTimer);
+  cloudTimer=setTimeout(()=>cloudPush(explicit),1600);
+  return;
+ }
  if(!navigator.onLine){cloudStatus('Offline · lokale Daten bleiben erhalten; späterer Upload geplant.');return}
  const current=snapshot();
  if(current===cloudBaseline&&!explicit){cloudStatus('Synchronisiert ✓');return}
@@ -476,7 +491,7 @@ window.addEventListener('online',()=>{if(cloudToken&&!cloudConflict){if(cloudAct
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cloudToken&&!cloudConflict)cloudCheck()});
 window.addEventListener('focus',()=>{if(cloudToken&&!cloudConflict)cloudCheck()});
 setInterval(()=>{if(cloudToken&&!cloudConflict)cloudCheck()},45000);
-if(cloudToken){sessionStorage.setItem(FILE_TOKEN_KEY,cloudToken);cloudConnect()}
+if(cloudToken){sessionStorage.setItem(FILE_TOKEN_KEY,cloudToken);cloudStatus('Cloud wird nach dem Neuladen aktualisiert …');cloudConnect()}
 cloudView();
 if('serviceWorker' in navigator && location.protocol==='https:')Promise.resolve();
 
