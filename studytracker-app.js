@@ -303,7 +303,7 @@ async function cloudPush(explicit=false){
  if(cloudBusy||!cloudToken||cloudRevision===null||cloudConflict||(!explicit&&!cloudActive))return;
  if(!navigator.onLine){cloudStatus('Offline · lokale Daten bleiben erhalten; späterer Upload geplant.');return}
  const current=snapshot();
- if(current===cloudBaseline){cloudStatus('Synchronisiert ✓');return}
+ if(current===cloudBaseline&&!explicit){cloudStatus('Synchronisiert ✓');return}
  cloudBusy=true;cloudView();let synced=false;
  try{
   const result=await cloudRequest('/sync','PUT',{revision:cloudRevision,data:JSON.parse(current)});
