@@ -296,10 +296,10 @@ async function cloudPush(explicit=false){
  if(!navigator.onLine){cloudStatus('Offline · lokale Daten bleiben erhalten; späterer Upload geplant.');return}
  const current=snapshot();
  if(current===cloudBaseline){cloudStatus('Synchronisiert ✓');return}
- cloudBusy=true;cloudView();
+ cloudBusy=true;cloudView();let synced=false;
  try{
   const result=await cloudRequest('/sync','PUT',{revision:cloudRevision,data:JSON.parse(current)});
-  cloudCommit(result.revision,current);
+  cloudCommit(result.revision,current);synced=true;
   cloudStatus('Automatisch synchronisiert ✓ · '+new Date().toLocaleTimeString('de-DE'));
  }catch(e){
   if(e.status===409)cloudPause('Synchronisierungskonflikt: Auf einem anderen Gerät wurden Daten verändert.');
@@ -307,7 +307,8 @@ async function cloudPush(explicit=false){
   else cloudStatus('Cloud momentan nicht erreichbar · Änderungen lokal gesichert. Erneuter Versuch automatisch.');
  }finally{
   cloudBusy=false;cloudView();
-  if(cloudActive&&snapshot()!==cloudBaseline)cloudChanged();
+  // Retry transport errors only on focus/reconnect/poll, not in a tight loop.
+  if(synced&&cloudActive&&snapshot()!==cloudBaseline)cloudChanged();
  }
 }
 async function cloudCheck(){
