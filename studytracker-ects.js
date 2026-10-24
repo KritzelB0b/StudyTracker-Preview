@@ -20,8 +20,8 @@
   const meta=planFor(m),catalogEntry=catalog().find(x=>x.code===m.handbookCode);
   const exactCatalog=!catalogEntry&&catalog().filter(x=>x.name.toLowerCase()===String(m.name||'').toLowerCase());
   const handbook=catalogEntry||(exactCatalog?.length===1?exactCatalog[0]:null);
-  const value=Number(handbook?.ects??meta?.ects??m.manualEcts);
-  return validEcts(value)?value:null;
+  for(const input of [handbook?.ects,meta?.ects,m.manualEcts]){const value=Number(input);if(validEcts(value))return value}
+  return null;
  }
  function award(m){
   const a=m?.creditRecord;
@@ -33,7 +33,6 @@
  const termAwards=id=>db.modules.filter(m=>award(m)?.semesterId===id);
  const termTotal=id=>termAwards(id).reduce((n,m)=>n+award(m).ects,0);
  function termFinished(id){const a=db.study?.ectsSemesterFinished?.[id];return typeof a==='string'&&/^\d{4}-\d\d-\d\d$/.test(a)?a:null}
- const getStatus=m=>award(m)?'Bestanden':'Offen';
  function completionRow(m){
   const earned=award(m),ects=moduleCredits(m);
   const label=earned?'Bestanden am '+new Date(earned.date+'T12:00:00').toLocaleDateString('de-DE')+
@@ -49,6 +48,8 @@
   const termId=activeTermId(),term=activeTerm(),list=termModules(),earned=termTotal(termId),total=creditsAll(),
    count=termAwards(termId).length,finished=termFinished(termId),home=list.filter(m=>semesterOf(m)===termId),
    planned=home.reduce((n,m)=>n+(moduleCredits(m)||0),0);
+  const dash=$e('stCreditDashboard');
+  if(dash)dash.innerHTML='<span>Erworbene ECTS: <strong>'+creditText(earned)+'</strong> in '+esc(term.label)+'</span><span>Studium insgesamt: <strong>'+creditText(total)+' ECTS</strong></span>';
   const summary=$e('stCreditOverview');
   if(summary)summary.innerHTML='<div class="st-ects-summary">'+
    '<div><span>Erworbene ECTS · '+esc(term.label)+'</span><strong>'+creditText(earned)+'</strong></div>'+
