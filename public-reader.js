@@ -32,11 +32,9 @@
  function termPicker(){return '<div class="st-public-term"><label for="publicSemester">Semester</label><select id="publicSemester" aria-label="Semester im Lesemodus auswählen">'+TERMS.map(t=>'<option value="'+esc(t.id)+'" '+(t.id===termId?'selected':'')+'>'+esc(t.label)+'</option>').join('')+'</select><span class="sub small">Öffentlicher Überblick aus Studienverlaufsplan und Modulhandbuch</span></div>'}
  function info(text){return '<p class="st-public-info">'+esc(text)+'</p>'}
  function handbook(){
-  const cat=studyCatalog(),tracks=cat?.tracks||{},view=cat?.getOverview(termNumber());
-  const selector='<div class="field"><label for="publicPathway">Fachrichtung</label><select id="publicPathway"><option value="">Fachrichtung auswählen …</option>'+
-    Object.entries(tracks).map(([id,t])=>'<option value="'+esc(id)+'" '+(view?.track===id?'selected':'')+'>'+esc(t.label)+'</option>').join('')+'</select></div>';
-  const heading='<section class="card st-public-handbook"><div class="title-row"><div><h2>Studienverlaufsplan · '+esc(term().label)+'</h2><p class="sub">Pflichtmodule nach StudiumPlus, ECTS und Stundenwerte nach dem THM-Modulhandbuch Version 8.</p></div><span class="pill">Nur lesen</span></div>'+selector;
-  if(!view?.selected)return heading+'<p class="sub">Bitte die Fachrichtung auswählen, damit insbesondere das 3., 4. und 7. Semester korrekt zugeordnet werden.</p></section>';
+  const cat=studyCatalog(),view=cat?.getOverview(termNumber());
+  const heading='<section class="card st-public-handbook"><div class="title-row"><div><h2>Studienverlaufsplan · '+esc(term().label)+'</h2><p class="sub">Allgemeiner Maschinenbau · Pflichtmodule nach StudiumPlus, ECTS und Stundenwerte nach dem THM-Modulhandbuch Version 8.</p></div><span class="pill">Nur lesen</span></div>';
+  if(!view?.selected)return heading+'<p class="sub">Der Studienverlaufsplan ist gerade nicht verfügbar.</p></section>';
   const all=[...view.required,...view.candidates],filter='<div class="field"><label for="publicHandbookFilter">Modul filtern</label><select id="publicHandbookFilter"><option value="">Alle Module</option>'+
    all.map(m=>'<option value="'+esc(m.code)+'" '+(catalogFilter===m.code?'selected':'')+'>'+esc(m.displayName||m.name)+'</option>').join('')+'</select></div>';
   const row=m=>'<div class="st-public-handbook-row"><strong>'+esc(m.displayName||m.name)+'</strong><span class="sub small">'+
@@ -221,7 +219,6 @@
   el.querySelector('#readerRetry')?.addEventListener('click',load);
   el.querySelector('#publicSemester')?.addEventListener('change',e=>setTerm(e.target.value));
   el.querySelector('#publicModule')?.addEventListener('change',e=>{selectedModule=e.target.value;render()});
-  el.querySelector('#publicPathway')?.addEventListener('change',e=>{studyCatalog()?.setPathway(e.target.value);catalogFilter='';render()});
   el.querySelector('#publicHandbookFilter')?.addEventListener('change',e=>{catalogFilter=e.target.value;render()});
   el.querySelector('[data-cal-prev]')?.addEventListener('click',()=>{if(monthOffset>0){monthOffset--;selected=iso(new Date(Number(term().start.slice(0,4)),Number(term().start.slice(5,7))-1+monthOffset,1));render()}});
   el.querySelector('[data-cal-next]')?.addEventListener('click',()=>{if(monthOffset<5){monthOffset++;selected=iso(new Date(Number(term().start.slice(0,4)),Number(term().start.slice(5,7))-1+monthOffset,1));render()}});
