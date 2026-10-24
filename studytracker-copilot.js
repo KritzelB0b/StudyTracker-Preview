@@ -17,9 +17,9 @@
   const seen=new Set();
   const soon=raw.filter(x=>typeof x.date==='string'&&/^\d{4}-\d\d-\d\d$/.test(x.date)&&x.date>=today)
    .sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time))
-   .filter(x=>{const k=[x.date,x.time,x.title.toLowerCase()].join('|');if(seen.has(k))return false;seen.add(k);return true;}).slice(0,5);
-  card.innerHTML='<div class="title-row"><div><h2>Bevorstehende Termine</h2><p class="sub">Die nächsten Termine aus deinem Studienplan</p></div><button type="button" class="btn-ghost btn-small" data-go="planner">Kalender ›</button></div>'+
-   (soon.length?soon.map(x=>'<div class="cp-row"><span><b>'+esc(x.title)+'</b><small>'+esc(x.kind)+'</small></span><span>'+esc(x.date)+(x.time?' · '+esc(x.time):'')+' <strong>'+(daysBetween(x.date,today)===0?'Heute':daysBetween(x.date,today)===1?'Morgen':'in '+daysBetween(x.date,today)+' Tagen')+'</strong></span></div>').join(''):'<p class="sub">Keine bevorstehenden Termine im ausgewählten Semester hinterlegt.</p>');
+   .filter(x=>{const k=[x.date,x.time,x.title.toLowerCase()].join('|');if(seen.has(k))return false;seen.add(k);return true;}).slice(0,2);
+  card.innerHTML='<div class="title-row"><div><h2>Bevorstehende Termine</h2></div><button type="button" class="btn-ghost btn-small" data-go="planner">Kalender ›</button></div>'+
+   (soon.length?soon.map(x=>'<div class="cp-row"><span><b>'+esc(x.title)+'</b></span><span>'+esc(x.date.slice(8,10)+'.'+x.date.slice(5,7)+'.')+' <strong>'+(daysBetween(x.date,today)===0?'Heute':daysBetween(x.date,today)===1?'Morgen':'in '+daysBetween(x.date,today)+' Tagen')+'</strong></span></div>').join(''):'<p class="sub">Keine anstehenden Termine.</p>');
  }
  const prev=window.render;
  if(typeof prev==='function')window.render=function(){prev();renderUpcoming()};
