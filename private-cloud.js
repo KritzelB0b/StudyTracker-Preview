@@ -192,6 +192,26 @@ let activeUpload=null;
 /* Persist pending PDF uploads locally so offline/network interruptions never silently discard them.
    Uploading only happens for the signed-in owner and the separate test file account. */
 let pendingDbPromise=null,queuedUploading=false;
+const KNOWN_PDF_KEY='studytracker_preview_known_pdfs_v1';
+function knownPdfs(){try{return JSON.parse(localStorage.getItem(KNOWN_PDF_KEY)||'{}')}catch{return {}}}
+function rememberPdf(fingerprint,doc,folderId){
+ if(!fingerprint||!doc)return;
+ try{
+  const known=knownPdfs();known[fingerprint]={id:doc,folderId};
+  const keys=Object.keys(known);
+  for(const key of keys.slice(0,Math.max(0,keys.length-300)))delete known[key];
+  localStorage.setItem(KNOWN_PDF_KEY,JSON.stringify(known));
+ }catch(e){}
+}
+async function pdfFingerprint(file){
+ const head=new Uint8Array(await file.slice(0,65536).arrayBuffer());
+ const tail=new Uint8Array(await file.slice(Math.max(0,file.size-65536)).arrayBuffer());
+ const meta=new TextEncoder().encode(file.name+'-'+file.size);
+ const combined=new Uint8Array(meta.length+head.length+tail.length);
+ combined.set(meta);combined.set(head,meta.length);combined.set(tail,meta.length+head.length);
+ const hash=await crypto.subtle.digest('SHA-256',combined);
+ return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 function pendingDb(){
  if(!pendingDbPromise)pendingDbPromise=new Promise((resolve,reject)=>{
   const req=indexedDB.open('studytracker-preview-pending-pdfs-v1',1);
@@ -237,7 +257,8 @@ async function queueReaderPdf(file){
  if(file.size>125*1048576){notice('PDF über 125 MB: nur lokal geöffnet, nicht in die Cloud übernommen.');return}
  const id=crypto.randomUUID?.()||String(Date.now())+'-'+Math.random();
  try{
-  await pendingSave({id,file,filename:file.name,size:file.size,mime:file.type||'application/pdf',folderId:folder,created:Date.now()});
+  const fingerprint=await pdfFingerprint(file);
+  await pendingSave({id,file,filename:file.name,size:file.size,mime:file.type||'application/pdf',fingerprint,folderId:folder,created:Date.now()});
   await pendingStatus();
   notice(navigator.onLine?'PDF lokal geöffnet · Cloud-Upload wird automatisch gestartet.':'PDF lokal gespeichert · Upload beginnt automatisch nach Wiederherstellung der Verbindung.');
   processPendingPdf();
@@ -250,11 +271,12 @@ async function processPendingPdf(){
   const items=await pendingAll();
   if(!items.length)return;
   const item=items[0];
-  // Reuse a same-name, same-size PDF in the selected folder on repeated
-  // opens or after a lost server acknowledgement; never silently delete it.
+  // Link only if this particular PDF was previously uploaded by this browser.
+  // Filename+size alone can describe different files and must not reuse notes.
   const url='/private/documents'+(item.folderId?'?folder_id='+encodeURIComponent(item.folderId):'');
   const existing=await(await request(url)).json();
-  const found=existing.find(d=>d.filename===item.filename&&d.size===item.size&&d.mime==='application/pdf');
+  const remembered=knownPdfs()[item.fingerprint];
+  const found=existing.find(d=>d.id===remembered?.id&&d.filename===item.filename&&d.size===item.size&&d.mime==='application/pdf');
   let cloudId=found?.id;
   if(!cloudId){
    const params=new URLSearchParams({filename:item.filename});
@@ -280,6 +302,7 @@ async function processPendingPdf(){
     xhr.send(file);
    });
   }
+  rememberPdf(item.fingerprint,cloudId,item.folderId);
   await pendingDelete(item.id);complete=true;
   await pendingStatus();
   linkCloudPdf({name:item.filename,size:item.size},cloudId);
