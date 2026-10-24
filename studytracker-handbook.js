@@ -38,12 +38,17 @@ function getOverview(number){
  };
 }
 function modulePresent(item){
- return db.modules.some(m=>m.handbookCode===item.code||
-  (m.name?.trim().toLowerCase()===item.name.toLowerCase()&&
-   (m.semesterId||LEGACY_TERM)===activeTermId()));
+ // Only a module belonging to the selected semester counts as present.
+ // Legacy Coaching belongs to both first and second semester via termModules().
+ return termModules().some(m=>m.handbookCode===item.code||
+  m.name?.trim().toLowerCase()===item.name.toLowerCase()||
+  (item.code==='8000'&&db.study?.modules?.some(meta=>meta.id==='s13_5'&&meta.localId===m.id)));
+}
+function wronglyAssigned(item){
+ return db.modules.find(m=>m.handbookCode===item.code&&!termModules().some(x=>x.id===m.id));
 }
 function importModule(item){
- if(modulePresent(item))return false;
+ if(modulePresent(item)||wronglyAssigned(item))return false;
  const plan=termPlan();
  const m={id:uid(),name:item.name,semesterId:activeTermId(),handbookCode:item.code,goal:0,
   color:colors[db.modules.length%colors.length]};
@@ -60,14 +65,18 @@ function renderHandbook(){
  let html='<div class="st-handbook-intro"><div><h3>Studienverlaufsplan · '+h(activeTerm().label)+'</h3>'+
   '<p class="sub">Allgemeiner Maschinenbau · Semesterzuordnung nach dem offiziellen Studienverlaufsplan von StudiumPlus. ECTS und Arbeitsaufwand stammen aus dem THM-Modulhandbuch Version 8.</p></div></div>';
  {
-  const exists=overview.required.filter(modulePresent),missing=overview.required.filter(m=>!modulePresent(m));
+  const missing=overview.required.filter(m=>!modulePresent(m));
+  const wronglyPlaced=missing.filter(wronglyAssigned),importable=missing.filter(m=>!wronglyAssigned(m));
   const row=m=>{
-   const label=m.shared?' · ein gemeinsames Modul für Semester 1 und 2':'';
+   const label=m.shared?' · Gesamtes Modul: 4 ECTS für beide Semester':'';
+   const originalCode=({8000:'80001/80002',3003:'3003/7026',4007:'4007/7027'})[m.code]||m.code;
+   const ownTermCredits=m.shared?2:m.ects;
    const control=modulePresent(m)?'<span class="st-handbook-state">Bereits vorhanden</span>':
-    term===1?'<span class="small muted">Bisherige Module bleiben erhalten</span>':
+    wronglyAssigned(m)?'<span class="st-handbook-state">Anderem Semester zugeordnet – bitte prüfen</span>':
+    term===1?'<span class="small muted">Ergänze das Modul über den Studienplan-Import</span>':
     '<button type="button" class="secondary" data-handbook-add="'+h(m.code)+'">+ Übernehmen</button>';
    return '<div class="st-handbook-row"><div><strong>'+h(m.displayName)+
-    '</strong><div class="sub small">Modulcode '+h(m.code)+' · '+m.ects+' ECTS · '+m.total+' h Arbeitsaufwand · '+
+    '</strong><div class="sub small">Modulcode '+h(originalCode)+' · '+ownTermCredits+' ECTS im Semester · '+m.total+' h Modul-Gesamtaufwand · '+
     m.presence+' h Präsenz · '+m.self+' h Selbststudium'+label+'</div></div>'+control+'</div>';
   };
   const slots=overview.slots,wahl=slots.wahl||0,wahlpflicht=slots.wahlpflicht||0;
@@ -75,7 +84,9 @@ function renderHandbook(){
   html+='<p class="sub small">Fachrichtung: <strong>'+h(overview.label)+'</strong> · <a href="'+h(overview.sourceUrl)+'" target="_blank" rel="noopener noreferrer">Offizieller Studienverlaufsplan</a></p>'+
    '<details class="st-handbook-details" open><summary>Fest vorgesehene Module ('+overview.required.length+')</summary>'+
    '<div>'+overview.required.map(row).join('')+'</div></details>';
-  if(term>1&&missing.length)html+='<button type="button" class="primary" id="handbookImportRequired">Fehlende Pflichtmodule übernehmen ('+missing.length+')</button>';
+  if(term>1&&importable.length)html+='<button type="button" class="primary" id="handbookImportRequired">Fehlende Pflichtmodule übernehmen ('+importable.length+')</button>';
+  if(wronglyPlaced.length)html+='<p class="sub" role="status">Semester-Abgleich: '+wronglyPlaced.length+' Pflichtmodule liegen noch in einem anderen Semester: '+
+    wronglyPlaced.map(m=>h(m.name)).join(', ')+'. Sie werden nicht doppelt importiert. Deine bisherigen Lernzeiten und Aufgaben bleiben unverändert.</p>';
   if(slotsText){
    html+='<details class="st-handbook-details" open><summary>Individuelle Modulwahl ('+h(slotsText)+')</summary>'+
    '<p class="sub small">Die Auswahl steht im Studienverlaufsplan ausdrücklich offen. Keines der folgenden Angebote wird automatisch als Pflichtmodul importiert.</p>'+
@@ -93,10 +104,10 @@ function renderHandbook(){
   const unlisted=imported.filter(m=>!accepted.has(m.handbookCode));
   if(unlisted.length)html+='<p class="sub" role="status">Hinweis: '+unlisted.length+' früher übernommene Module sind in diesem Studienverlaufsplan nicht als feste Pflichtmodule aufgeführt ('+
     unlisted.map(m=>h(m.name)).join(', ')+'). Sie bleiben zur Sicherheit unverändert. Bitte prüfe, ob es deine individuellen Wahlmodule sind.</p>';
-  html+='<p class="sub small">Die Wahlmöglichkeiten sind Angebotsbeispiele, kein verbindlicher Stunden- oder Prüfungsplan. Bereits gespeicherte Module und Lernzeiten werden nicht automatisch verschoben oder gelöscht.</p>';
+  html+='<p class="sub small">Regelstudium Allgemeiner Maschinenbau: 210 ECTS in sieben Semestern. Coaching-Selbstkompetenz zählt 2 ECTS je Semester im Studienverlaufsplan, insgesamt 4 ECTS für das gemeinsame Modul. Das fünfte Semester enthält fünf Wahlpflichtplätze à 5 ECTS. Die Wahlmöglichkeiten sind Angebotsbeispiele, kein verbindlicher Stunden- oder Prüfungsplan. Bereits gespeicherte Module und Lernzeiten werden nicht automatisch verschoben oder gelöscht.</p>';
   root.innerHTML=html;
   root.querySelector('#handbookImportRequired')?.addEventListener('click',()=>{
-   const added=missing.filter(importModule);
+   const added=importable.filter(importModule);
    if(added.length){persist();notify(added.length+' fehlende Pflichtmodule übernommen')}
   });
   root.querySelectorAll('[data-handbook-add]').forEach(btn=>btn.addEventListener('click',()=>{
