@@ -185,12 +185,14 @@ $('detailModule').addEventListener('change',e=>{selectedDetailId=e.target.value;
 document.addEventListener('submit',e=>{if(e.target.id!=='detailEditForm')return;e.preventDefault();const m=detailModule(),d=new FormData(e.target);if(!m)return;const name=String(d.get('name')||'').trim(),moodle=String(d.get('moodle')||'').trim();if(!name)return;if(moodle&&!safeMoodle(moodle))return alert('Bitte einen gültigen http(s)-Link eintragen.');m.name=name;const planModule=termPlan(false)?.modules?.find(x=>x.localId===m.id);if(planModule){if(activeTermId()!==LEGACY_TERM){const ects=Number(d.get('ects')),presence=Number(d.get('presence'));if(!Number.isFinite(ects)||!Number.isFinite(presence)||ects<0||ects>40||presence<0||presence>ects*25)return alert('Präsenzstunden müssen zwischen 0 und ECTS × 25 liegen.');planModule.ects=ects;planModule.total=ects*25;planModule.presence=presence;planModule.self=Math.max(0,ects*25-presence)}planModule.name=name}m.goal=Number(d.get('goal'));m.color=String(d.get('color'));m.moodle=moodle;m.description=String(d.get('description')||'').slice(0,1200);persist();notify('Modul gespeichert')});
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const id=b.dataset.seedSingle;if(id){const count=seedTopics(id);persist();notify(count+' Handbuch-Themen ergänzt');return}const edit=b.dataset.detailEditTopic;if(edit){const t=getT(edit);if(!t)return;openNameDialog({title:'Umbenennen · Thema',value:t.name,maxLength:100,onSave:name=>{t.name=name.slice(0,100);persist();notify('Thema aktualisiert')}});return}const root=b.dataset.detailAddRoot,child=b.dataset.detailAddChild;if(root||child){const mid=root||getT(child)?.moduleId;if(!mid)return;openNameDialog({title:child?'Unterthema hinzufügen':'Hauptthema hinzufügen',label:'Name',submit:'Hinzufügen',maxLength:100,onSave:name=>{db.topics.push({id:uid(),moduleId:mid,name:name.slice(0,100),parentId:child||'',mastery:0});persist();notify('Thema ergänzt')}});return}});
 
-// StudyTracker 1.2: owner-only Railway sync. Do not store the login password.
+// Automatic revision-aware Preview sync. Never overwrite diverging local and cloud edits.
 const API='https://studytracker-privatefiles-api-test.up.railway.app';
-let cloudToken=sessionStorage.getItem('studytracker_preview_study_token_v34')||'';
-let cloudRevision=null,cloudBaseline=null,cloudActive=false,cloudBusy=false,cloudTimer=null;
+const TOKEN_KEY='studytracker_preview_study_token_v34';
+const CHECKPOINT_KEY='studytracker_preview_last_synced_snapshot_v1';
+let cloudToken=sessionStorage.getItem(TOKEN_KEY)||'';
+let cloudRevision=null,cloudBaseline=null,cloudActive=false,cloudBusy=false,cloudTimer=null,cloudConflict=false;
 const snapshot=()=>JSON.stringify({modules:db.modules,topics:db.topics,entries:db.entries,study:db.study||null});
-const cloudStatus=(s)=>{$('cloudStatus').textContent=s};
+const cloudStatus=s=>{$('cloudStatus').textContent=s};
 function cloudView(){
  $('cloudActions').classList.toggle('hidden',!cloudToken);
  $('cloudLogout').classList.toggle('hidden',!cloudToken);
@@ -201,90 +203,172 @@ function cloudView(){
  $('cloudSyncNow').disabled=!cloudActive||cloudBusy;
 }
 async function cloudRequest(path,method='GET',body){
- const c=new AbortController();const timer=setTimeout(()=>c.abort(),12000);
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),16000);
  try{
- const r=await fetch(API+path,{method,headers:{'Content-Type':'application/json',...(cloudToken?{'Authorization':'Bearer '+cloudToken}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:c.signal});
- const result=await r.json().catch(()=>({}));
- if(!r.ok){const desc=typeof result.detail==='string'?result.detail:'HTTP '+r.status;const err=new Error(desc);err.status=r.status;throw err}
- return result;
- }finally{clearTimeout(timer)}
+  const response=await fetch(API+path,{method,headers:{'Content-Type':'application/json',...(cloudToken?{'Authorization':'Bearer '+cloudToken}:{})},
+   ...(body?{body:JSON.stringify(body)}:{}),signal:controller.signal,cache:'no-store'});
+  const value=await response.json().catch(()=>({}));
+  if(!response.ok){const e=new Error(typeof value.detail==='string'?value.detail:'HTTP '+response.status);e.status=response.status;throw e}
+  return value;
+ }finally{clearTimeout(timeout)}
+}
+function normalizedRemote(value){
+ const data=value?.data;
+ if(!Array.isArray(data?.modules)||!Array.isArray(data?.topics)||!Array.isArray(data?.entries))throw Error('Unerwartetes Cloud-Datenformat');
+ return JSON.stringify({modules:data.modules,topics:data.topics,entries:data.entries,study:data.study||null});
+}
+function cloudCommit(revision,baseline){
+ cloudRevision=revision;cloudBaseline=baseline;cloudActive=true;cloudConflict=false;
+ try{localStorage.setItem(CHECKPOINT_KEY,baseline)}catch(e){cloudStatus('Cloud aktuell; lokaler Synchronisationsmarker konnte nicht gespeichert werden.')}
+}
+function cloudPause(message){
+ cloudActive=false;cloudConflict=true;clearTimeout(cloudTimer);
+ cloudStatus(message+' Nichts überschrieben. Bitte zuerst JSON sichern und unter Daten & Einstellungen einmalig die richtige Datenversion wählen.');
+ cloudView();
+}
+function cloudExpire(){
+ cloudToken='';cloudRevision=null;cloudActive=false;cloudConflict=false;
+ sessionStorage.removeItem(TOKEN_KEY);accessGate(false);
+ cloudStatus('Anmeldung abgelaufen. Bitte erneut anmelden; lokale Daten bleiben erhalten.');cloudView();
+}
+function cloudApply(remote,revision){
+ if(timer.running)throw Error('Laufender Lerntimer: Cloud-Laden bis zum Abschluss des Timers verschoben');
+ const parsed=JSON.parse(remote);
+ localStorage.setItem(KEY,remote);
+ db={modules:parsed.modules,topics:parsed.topics,entries:parsed.entries,study:parsed.study||null};
+ cloudCommit(revision,remote);render();
+ cloudStatus('Aktuell ✓ · Cloud-Änderungen automatisch übernommen');
+}
+function cloudEmpty(raw){
+ const value=JSON.parse(raw);
+ return !value.entries.length&&!value.topics.length&&!value.modules.length&&
+  (!value.study||(!value.study.events?.length&&!value.study.tasks?.length&&!value.study.modules?.length&&!Object.keys(value.study.termPlans||{}).length));
+}
+async function cloudConnect(){
+ if(!cloudToken||cloudBusy||cloudConflict||!navigator.onLine)return;
+ cloudBusy=true;cloudView();let needsPush=false;
+ try{
+  const before=snapshot(),remote=await cloudRequest('/sync'),server=normalizedRemote(remote);
+  if(snapshot()!==before){cloudStatus('Während des Ladens wurden lokale Daten geändert. Synchronisierung wird erneut geprüft.');return}
+  const checkpoint=localStorage.getItem(CHECKPOINT_KEY);
+  const freshBrowser=localStorage.getItem(KEY)===null;
+  if(before===server){cloudCommit(remote.revision,before);cloudStatus('Automatisch verbunden ✓ · Daten sind aktuell')}
+  else if(checkpoint!==null&&before===checkpoint){cloudApply(server,remote.revision)}
+  else if(checkpoint!==null&&server===checkpoint){cloudCommit(remote.revision,server);needsPush=true}
+  else if(freshBrowser||cloudEmpty(before)){cloudApply(server,remote.revision)}
+  else if(cloudEmpty(server)){cloudCommit(remote.revision,server);needsPush=true}
+  else cloudPause('Einmaliger Abgleich nötig: lokale Daten und Cloud unterscheiden sich.');
+ }catch(e){
+  if(e.status===401)cloudExpire();
+  else cloudStatus('Automatischer Cloud-Abgleich noch nicht möglich: '+e.message+'. Lokale Daten bleiben erhalten.');
+ }finally{
+  cloudBusy=false;cloudView();
+  if(needsPush&&cloudActive)cloudChanged();
+ }
 }
 async function cloudAuth(register){
  if(cloudBusy)return;
  const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value;
  if(!email||password.length<12){alert('Bitte gültige E-Mail und Passwort mit mindestens 12 Zeichen eingeben.');return}
- cloudBusy=true;cloudView();cloudStatus('Verbindung wird geprüft …');
+ cloudBusy=true;cloudView();cloudStatus('Anmeldung wird geprüft …');
  try{
- const result=await cloudRequest(register?'/auth/register':'/auth/login','POST',{email,password});
- cloudToken=result.token;sessionStorage.setItem('studytracker_preview_study_token_v34',cloudToken);$('cloudPassword').value='';
- cloudActive=false;cloudRevision=null;cloudBaseline=null;
- const remote=await cloudRequest('/sync');cloudRevision=remote.revision;accessGate(true);
- cloudStatus('Angemeldet. Cloud Revision '+remote.revision+'. Bitte wähle Hochladen oder Herunterladen; noch keine automatische Synchronisierung.');
- }catch(e){cloudToken='';sessionStorage.removeItem('studytracker_preview_study_token_v34');cloudStatus('Anmeldung fehlgeschlagen: '+e.message)}
- finally{cloudBusy=false;cloudView()}
+  const result=await cloudRequest(register?'/auth/register':'/auth/login','POST',{email,password});
+  cloudToken=result.token;sessionStorage.setItem(TOKEN_KEY,cloudToken);$('cloudPassword').value='';
+  cloudActive=false;cloudRevision=null;cloudBaseline=null;cloudConflict=false;
+  accessGate(true);
+ }catch(e){
+  cloudToken='';sessionStorage.removeItem(TOKEN_KEY);cloudStatus('Anmeldung fehlgeschlagen: '+e.message);
+ }finally{
+  cloudBusy=false;cloudView();
+ }
+ if(cloudToken)await cloudConnect();
 }
 function cloudChanged(){
- if(!cloudActive||!cloudToken)return;
- cloudStatus('Lokale Änderungen – Synchronisierung ausstehend …');clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>cloudPush(false),1200);
+ if(!cloudToken||!cloudActive||cloudConflict)return;
+ if(snapshot()===cloudBaseline)return;
+ clearTimeout(cloudTimer);
+ if(!navigator.onLine){cloudStatus('Offline · Änderungen lokal gesichert; Upload beim nächsten Verbindungsaufbau.');return}
+ cloudStatus('Lokale Änderungen gespeichert · automatischer Cloud-Upload folgt …');
+ cloudTimer=setTimeout(()=>cloudPush(false),1200);
 }
-async function cloudPush(explicit){
- if(cloudBusy||!cloudToken||cloudRevision===null)return;
- if(!explicit&&!cloudActive)return;
- if(!navigator.onLine){cloudStatus('Offline: Änderungen lokal gespeichert. Synchronisierung beim nächsten Verbindungsversuch.');return}
+async function cloudPush(explicit=false){
+ if(cloudBusy||!cloudToken||cloudRevision===null||cloudConflict||(!explicit&&!cloudActive))return;
+ if(!navigator.onLine){cloudStatus('Offline · lokale Daten bleiben erhalten; späterer Upload geplant.');return}
+ const current=snapshot();
+ if(current===cloudBaseline){cloudStatus('Synchronisiert ✓');return}
  cloudBusy=true;cloudView();
  try{
-  const current=snapshot();
-  if(cloudActive&&current===cloudBaseline){cloudStatus('Cloud ist aktuell.');return}
-  const r=await cloudRequest('/sync','PUT',{revision:cloudRevision,data:JSON.parse(current)});
-  cloudRevision=r.revision;cloudBaseline=current;cloudActive=true;
-  cloudStatus('Synchronisiert ✓ · Revision '+r.revision+' · '+new Date().toLocaleTimeString('de-DE'));
+  const result=await cloudRequest('/sync','PUT',{revision:cloudRevision,data:JSON.parse(current)});
+  cloudCommit(result.revision,current);
+  cloudStatus('Automatisch synchronisiert ✓ · '+new Date().toLocaleTimeString('de-DE'));
  }catch(e){
-  if(e.status===409){cloudActive=false;cloudStatus('Konflikt: Auf Railway liegen neuere Daten. Nichts wurde überschrieben! Bitte zuerst JSON exportieren und danach bewusst Cloud-Daten laden oder lokale Daten zusammenführen.');}
-  else if(e.status===401){cloudActive=false;cloudToken='';sessionStorage.removeItem('studytracker_preview_study_token_v34');cloudStatus('Sitzung abgelaufen. Bitte neu anmelden.');}
-  else{cloudStatus('Cloud nicht erreichbar: '+e.message+' · lokale Daten bleiben erhalten.');}
- }finally{cloudBusy=false;cloudView()}
+  if(e.status===409)cloudPause('Synchronisierungskonflikt: Auf einem anderen Gerät wurden Daten verändert.');
+  else if(e.status===401)cloudExpire();
+  else cloudStatus('Cloud momentan nicht erreichbar · Änderungen lokal gesichert. Erneuter Versuch automatisch.');
+ }finally{
+  cloudBusy=false;cloudView();
+  if(cloudActive&&snapshot()!==cloudBaseline)cloudChanged();
+ }
+}
+async function cloudCheck(){
+ if(!cloudToken||cloudBusy||cloudConflict||!navigator.onLine||document.hidden)return;
+ if(!cloudActive){await cloudConnect();return}
+ cloudBusy=true;cloudView();let send=false;
+ try{
+  const before=snapshot(),result=await cloudRequest('/sync'),remote=normalizedRemote(result);
+  if(result.revision!==cloudRevision){
+   if(before===remote){cloudCommit(result.revision,remote);cloudStatus('Cloud ist aktuell ✓')}
+   else if(before===cloudBaseline&&snapshot()===before)cloudApply(remote,result.revision);
+   else cloudPause('Zwei Geräte haben zwischenzeitlich unterschiedliche Änderungen gespeichert.');
+  }else if(before!==cloudBaseline)send=true;
+ }catch(e){
+  if(e.status===401)cloudExpire();
+  else cloudStatus('Cloud-Verbindung unterbrochen · lokale Daten bleiben erhalten. Neuer Versuch folgt.');
+ }finally{cloudBusy=false;cloudView();if(send&&cloudActive)cloudChanged()}
 }
 async function cloudPull(){
  if(cloudBusy||!cloudToken)return;
  if(timerElapsed()>1000){alert('Bitte laufenden Timer zuerst speichern oder zurücksetzen.');return}
- if(!confirm('ACHTUNG: Die lokalen Module, Themen und Lernzeiten werden durch den Cloud-Datenbestand ersetzt. Hast du vorher ein JSON-Backup erstellt?'))return;
+ if(!confirm('Lokale Module, Lernzeiten und ECTS werden durch den Cloud-Stand ersetzt. Bitte vorher ein JSON-Backup exportieren. Fortfahren?'))return;
  cloudBusy=true;cloudView();
  try{
- const old=snapshot();
- const r=await cloudRequest('/sync');
- if(!Array.isArray(r.data?.modules)||!Array.isArray(r.data?.topics)||!Array.isArray(r.data?.entries))throw Error('Unerwartetes Datenformat');
- // Avoid silently losing local changes made while loading.
- if(old!==snapshot())throw Error('Lokale Daten haben sich zwischenzeitlich geändert');
- db={modules:r.data.modules,topics:r.data.topics,entries:r.data.entries,study:r.data.study||null};
- cloudRevision=r.revision;cloudBaseline=snapshot();cloudActive=true;
- localStorage.setItem(KEY,cloudBaseline);render();cloudStatus('Cloud-Daten geladen ✓ · Automatische Synchronisierung aktiv.');
- }catch(e){cloudStatus('Cloud-Laden fehlgeschlagen: '+e.message)}finally{cloudBusy=false;cloudView()}
+  const before=snapshot(),result=await cloudRequest('/sync'),remote=normalizedRemote(result);
+  if(snapshot()!==before)throw Error('Lokale Änderungen während des Ladens erkannt');
+  cloudApply(remote,result.revision);
+ }catch(e){cloudStatus('Cloud-Laden abgebrochen: '+e.message)}finally{cloudBusy=false;cloudView()}
 }
 async function cloudManualUpload(){
- if(!cloudToken||cloudBusy)return;
- if(!confirm('ACHTUNG: Der Cloud-Datenbestand wird durch deine lokalen Daten ersetzt, sofern sich seit dem letzten Abruf nichts geändert hat. Vorher JSON-Backup erstellen! Fortfahren?'))return;
- try{const r=await cloudRequest('/sync');cloudRevision=r.revision;cloudActive=false;await cloudPush(true)}catch(e){cloudStatus('Hochladen abgebrochen: '+e.message)}
+ if(cloudBusy||!cloudToken)return;
+ if(!confirm('Achtung: Dies ersetzt den bisherigen Cloud-Stand durch deine lokalen Daten. Bitte vorher JSON-Backup erstellen. Fortfahren?'))return;
+ cloudBusy=true;cloudView();
+ try{
+  const result=await cloudRequest('/sync');
+  cloudRevision=result.revision;cloudActive=true;cloudConflict=false;
+ }catch(e){cloudStatus('Hochladen abgebrochen: '+e.message);cloudBusy=false;cloudView();return}
+ cloudBusy=false;cloudView();
+ await cloudPush(true);
 }
 $('cloudLogin').addEventListener('click',()=>cloudAuth(false));
 $('cloudRegister').addEventListener('click',()=>cloudAuth(true));
 $('cloudLogout').addEventListener('click',async()=>{
  const previousToken=cloudToken;
- clearTimeout(cloudTimer);cloudActive=false;cloudToken='';cloudRevision=null;cloudBaseline=null;
- sessionStorage.removeItem('studytracker_preview_study_token_v34');accessGate(false);cloudView();
- // Clearing this browser session happens immediately, even without network access.
- // The separate server request invalidates the stolen-token scenario.
- let revoked=false;const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),6000);
+ clearTimeout(cloudTimer);cloudActive=false;cloudConflict=false;cloudToken='';cloudRevision=null;cloudBaseline=null;
+ sessionStorage.removeItem(TOKEN_KEY);accessGate(false);cloudView();
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),6000);
+ let revoked=false;
  try{
-  if(previousToken){const r=await fetch(API+'/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+previousToken},signal:controller.signal});revoked=r.ok}
+  if(previousToken){const result=await fetch(API+'/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+previousToken},signal:controller.signal});revoked=result.ok}
  }catch(e){}finally{clearTimeout(timeout)}
- cloudStatus(revoked?'Abgemeldet. Serversitzung widerrufen. Lokale Daten bleiben auf diesem Gerät.':'Lokal abgemeldet. Serversitzung konnte nicht bestätigt widerrufen werden (z. B. offline). Lokale Daten bleiben auf diesem Gerät.');
+ cloudStatus(revoked?'Abgemeldet · Serversitzung widerrufen; lokale Daten bleiben erhalten.':'Lokal abgemeldet · Serverwiderruf nicht bestätigt. Daten bleiben lokal erhalten.');
 });
 $('cloudUpload').addEventListener('click',cloudManualUpload);
 $('cloudDownload').addEventListener('click',cloudPull);
-$('cloudSyncNow').addEventListener('click',async()=>{if(!cloudActive)return;try{const r=await cloudRequest('/sync');if(r.revision!==cloudRevision){cloudActive=false;cloudStatus('Konflikt: andere Version in der Cloud. Bitte JSON sichern und Daten bewusst abgleichen.');cloudView();return}await cloudPush(false)}catch(e){cloudStatus('Abruf fehlgeschlagen: '+e.message)}});
-window.addEventListener('online',()=>{if(cloudActive)cloudChanged()});
-// A token remains only during this tab session. Explicit direction choice required after reload.
-if(cloudToken){cloudRequest('/sync').then(r=>{accessGate(true);cloudRevision=r.revision;cloudStatus('Angemeldet – bitte Hochladen oder Herunterladen wählen. Cloud Revision '+r.revision)}).catch(e=>{cloudStatus('Cloud nicht erreichbar: '+e.message);accessGate(false)})}
+$('cloudSyncNow').addEventListener('click',()=>cloudCheck());
+window.addEventListener('online',()=>{if(cloudToken&&!cloudConflict){if(cloudActive)cloudCheck();else cloudConnect()}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cloudToken&&!cloudConflict)cloudCheck()});
+window.addEventListener('focus',()=>{if(cloudToken&&!cloudConflict)cloudCheck()});
+setInterval(()=>{if(cloudToken&&!cloudConflict)cloudCheck()},45000);
+if(cloudToken)cloudConnect();
 cloudView();
 if('serviceWorker' in navigator && location.protocol==='https:')Promise.resolve();
 
