@@ -262,7 +262,9 @@ async function cloudConnect(){
  if(!cloudToken||cloudBusy||cloudConflict||!navigator.onLine)return;
  cloudBusy=true;cloudView();let needsPush=false;
  try{
+  const tokenAtStart=cloudToken;
   const before=snapshot(),remote=await cloudRequest('/sync'),server=normalizedRemote(remote);
+  if(cloudToken!==tokenAtStart)return;
   // A resumed test session is only allowed to reveal editor data after the
   // server accepts its token. Never unlock the local editor for an expired token.
   accessGate(true);
@@ -292,10 +294,10 @@ async function cloudAuth(register){
   const result=await cloudRequest(register?'/auth/register':'/auth/login','POST',{email,password});
   cloudToken=result.token;sessionStorage.setItem(TOKEN_KEY,cloudToken);
   sessionStorage.setItem(FILE_TOKEN_KEY,cloudToken);
-  document.dispatchEvent(new CustomEvent('st-preview-credentials',{detail:{token:cloudToken,source:'study'}}));
   $('cloudPassword').value='';
   cloudActive=false;cloudRevision=null;cloudBaseline=null;cloudConflict=false;
   accessGate(true);
+  document.dispatchEvent(new CustomEvent('st-preview-credentials',{detail:{token:cloudToken,source:'study'}}));
  }catch(e){
   cloudToken='';sessionStorage.removeItem(TOKEN_KEY);
   cloudStatus(e.status===401?'Testkonto-Anmeldung abgelehnt: Bitte das Passwort des separaten Test-Dateispeichers verwenden, nicht das Live-Passwort.':
@@ -410,7 +412,7 @@ window.addEventListener('online',()=>{if(cloudToken&&!cloudConflict){if(cloudAct
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cloudToken&&!cloudConflict)cloudCheck()});
 window.addEventListener('focus',()=>{if(cloudToken&&!cloudConflict)cloudCheck()});
 setInterval(()=>{if(cloudToken&&!cloudConflict)cloudCheck()},45000);
-if(cloudToken)cloudConnect();
+if(cloudToken){sessionStorage.setItem(FILE_TOKEN_KEY,cloudToken);cloudConnect()}
 cloudView();
 if('serviceWorker' in navigator && location.protocol==='https:')Promise.resolve();
 
