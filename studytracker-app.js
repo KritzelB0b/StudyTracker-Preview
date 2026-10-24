@@ -192,7 +192,11 @@ const CHECKPOINT_KEY='studytracker_preview_last_synced_snapshot_v1';
 let cloudToken=sessionStorage.getItem(TOKEN_KEY)||'';
 let cloudRevision=null,cloudBaseline=null,cloudActive=false,cloudBusy=false,cloudTimer=null,cloudConflict=false;
 const snapshot=()=>JSON.stringify({modules:db.modules,topics:db.topics,entries:db.entries,study:db.study||null});
-const cloudStatus=s=>{$('cloudStatus').textContent=s};
+const cloudStatus=s=>{
+ $('cloudStatus').textContent=s;
+ const indicator=$('studySyncIndicator');
+ if(indicator)indicator.textContent=s.includes('✓')?'Cloud ✓':s.includes('Konflikt')||s.includes('Abgleich')?'Abgleich nötig':s.includes('Offline')?'Offline gespeichert':cloudToken?'Cloud wird geprüft':'Nur lokal';
+};
 function cloudView(){
  $('cloudActions').classList.toggle('hidden',!cloudToken);
  $('cloudLogout').classList.toggle('hidden',!cloudToken);
@@ -241,8 +245,12 @@ function cloudApply(remote,revision){
 }
 function cloudEmpty(raw){
  const value=JSON.parse(raw);
- return !value.entries.length&&!value.topics.length&&!value.modules.length&&
-  (!value.study||(!value.study.events?.length&&!value.study.tasks?.length&&!value.study.modules?.length&&!Object.keys(value.study.termPlans||{}).length));
+ if(value.entries.length||value.topics.length||value.modules.length)return false;
+ // Even if no modules exist, preserve practice reports, term metadata and awards.
+ const study=value.study;
+ if(!study)return true;
+ return Object.entries(study).every(([key,item])=>
+  ['modules','events','tasks'].includes(key)&&Array.isArray(item)&&item.length===0);
 }
 async function cloudConnect(){
  if(!cloudToken||cloudBusy||cloudConflict||!navigator.onLine)return;
@@ -460,7 +468,7 @@ function plannerRender(){
  let stat=`<div class="statsmini"><div><div class="sub">Selbst gelernt</div><div class="num">${fmt(hrs)} h</div></div><div><div class="sub">Selbststudium-Soll</div><div class="num">${goal?fmt(goal)+' h':'—'}</div></div><div><div class="sub">Zeitanteil Semester (Referenz)</div><div class="num">${fmt(timeProgress*100)} %</div></div></div>`;
  stat+=assigned.length?'<div style="overflow:auto"><table class="sem-table"><thead><tr><th>Modul</th><th>Selbststudium Soll</th><th>zeitanteilig</th><th>Ist gelernt</th><th>Differenz</th></tr></thead><tbody>'+assigned.map(m=>{const actual=sum(termEntries().filter(e=>e.moduleId===m.localId))/60,target=Number(m.self)||0,expected=target*timeProgress;return `<tr><td>${esc(m.name)}</td><td>${fmt(target)} h</td><td>${fmt(expected)} h</td><td>${fmt(actual)} h</td><td>${fmt(actual-expected)} h</td></tr>`}).join('')+'</tbody></table></div>':'<div class="empty">Importiere im Studienplan zuerst die Module aus dem Handbuch.</div>';
  $('planStats').innerHTML=stat;
- $('planOnlineStatus').textContent=navigator.onLine?'Online: lokale Daten verfügbar; Cloud-Status unter Daten & Einstellungen prüfen.':'Offline: neue Einträge werden lokal gespeichert und müssen später synchronisiert werden.';
+ $('planOnlineStatus').textContent=navigator.onLine?'Online: lokale Daten verfügbar; Cloud-Status unter Daten & Einstellungen prüfen.':'Offline: neue Einträge bleiben lokal und werden nach Wiederherstellung der Verbindung automatisch synchronisiert.';
 }
 $('taskDate').value=isTermDate(today())?today():activeTerm().start;
 $('planPrev').addEventListener('click',()=>{plannerOffset--;plannerRender()});$('planNext').addEventListener('click',()=>{plannerOffset++;plannerRender()});$('planToday').addEventListener('click',()=>{plannerOffset=0;plannerRender()});$('taskFilter').addEventListener('change',plannerRender);
