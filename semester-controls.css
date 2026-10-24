@@ -184,3 +184,27 @@
 .st-sync-indicator{font-size:12px;line-height:1.3;background:#26241f;color:#e0d6c8;border:1px solid #615344;border-radius:100px;padding:6px 11px;white-space:nowrap}
 #cloudAutoQueueStatus{padding:8px 10px;border:1px solid #5a5045;border-radius:9px;line-height:1.5}
 @media(max-width:650px){.st-sync-head{flex-direction:column;align-items:flex-end;gap:6px}.st-sync-indicator{font-size:11px;padding:5px 9px}}
+
+
+/* Lernprotokoll: one-tap edit of an existing session, also on mobile */
+.st-entry-edit-dialog{width:min(570px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow-y:auto}
+.st-entry-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.st-entry-edit-grid .field{min-width:0;margin:0}
+.st-entry-edit-grid label{display:block;font-size:13px;font-weight:650;margin-bottom:6px}
+.st-entry-edit-grid input,.st-entry-edit-grid select,.st-entry-edit-grid textarea{
+ width:100%;max-width:100%;min-width:0;min-height:44px;border-radius:9px;
+ background:#201f1d;color:#f6f1ea;border:1px solid #746253;padding:9px 11px
+}
+.st-entry-edit-grid .st-entry-edit-note{grid-column:1 / -1}
+.st-entry-edit-grid textarea{resize:vertical}
+.st-entry-edit-button{min-width:38px;min-height:38px}
+@media(max-width:650px){
+ .st-entry-edit-dialog{padding:15px}
+ .st-entry-edit-grid{grid-template-columns:1fr;gap:11px}
+ .st-entry-edit-grid .st-entry-edit-note{grid-column:auto}
+ .st-entry-edit-dialog .st-edit-actions{flex-wrap:wrap}
+ .st-entry-edit-dialog .st-edit-actions button{flex:1 1 140px}
+ .entry{align-items:flex-start;flex-wrap:wrap}
+ .entry .right{flex-wrap:wrap;justify-content:flex-end;margin-left:auto}
+ .st-entry-edit-button{min-width:44px;min-height:44px}
+}
