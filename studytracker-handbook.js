@@ -45,7 +45,9 @@ function modulePresent(item){
   (item.code==='8000'&&db.study?.modules?.some(meta=>meta.id==='s13_5'&&meta.localId===m.id)));
 }
 function wronglyAssigned(item){
- return db.modules.find(m=>m.handbookCode===item.code&&!termModules().some(x=>x.id===m.id));
+ return db.modules.find(m=>(m.handbookCode===item.code||
+  m.name?.trim().toLowerCase()===item.name.toLowerCase())&&
+  !termModules().some(x=>x.id===m.id));
 }
 function importModule(item){
  if(modulePresent(item)||wronglyAssigned(item))return false;
@@ -62,8 +64,9 @@ function importModule(item){
 function renderHandbook(){
  const root=$('handbookCatalog');if(!root)return;
  const term=studyTermNumber(),overview=getOverview(term);
+ const nominalECTS=[33,27,32,31,25,32,30][term-1];
  let html='<div class="st-handbook-intro"><div><h3>Studienverlaufsplan · '+h(activeTerm().label)+'</h3>'+
-  '<p class="sub">Allgemeiner Maschinenbau · Semesterzuordnung nach dem offiziellen Studienverlaufsplan von StudiumPlus. ECTS und Arbeitsaufwand stammen aus dem THM-Modulhandbuch Version 8.</p></div></div>';
+  '<p class="sub">Allgemeiner Maschinenbau · '+nominalECTS+' ECTS im regulären Studienverlauf dieses Semesters (insgesamt 210 ECTS). Zuordnung nach StudiumPlus, Modulstunden nach dem THM-Modulhandbuch Version 8.</p></div></div>';
  {
   const missing=overview.required.filter(m=>!modulePresent(m));
   const wronglyPlaced=missing.filter(wronglyAssigned),importable=missing.filter(m=>!wronglyAssigned(m));
