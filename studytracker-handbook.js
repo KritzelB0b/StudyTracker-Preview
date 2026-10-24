@@ -18,29 +18,17 @@ const TRACKS={
  allgemein:{label:'Allgemeiner Maschinenbau',url:'https://studiumplus.de/studiengaenge/ingenieurwesen-maschinenbau-2/ingenieurwesen-maschinenbau-allgemeiner-maschinenbau/',required:{
  3:['3010','2004','4004','3001','8002','3000'],
  4:['3004','4003','4005','8004','3008','8001'],
- 7:['6002','3003','3002','7010','7011']},slots:{5:{wahlpflicht:5}}},
- formgebung:{label:'Formgebung',url:'https://studiumplus.de/studiengaenge/ingenieurwesen-maschinenbau-2/ingenieurwesen-maschinenbau-formgebung/',required:{
- 3:['3010','2004','3006','3001','8002','3000'],
- 4:['3004','8004','3008','8001'],
- 7:['6002','3002','7010','7011']},slots:{4:{wahl:2},5:{wahlpflicht:5},7:{wahl:1}}},
- hygiene:{label:'Hygiene Design',url:'https://studiumplus.de/studiengaenge/ingenieurwesen-maschinenbau-2/ingenieurwesen-maschinenbau-hygiene-design/',required:{
- 3:['4008','2004','4007','3001','8002','3000'],
- 4:['3004','4003','4006','8004','3008','8001'],
- 7:['6002','3003','3002','7010','7011']},slots:{5:{wahlpflicht:5}}},
- kaelte:{label:'Kälte- und Klimatechnik',url:'https://studiumplus.de/studiengaenge/ingenieurwesen-maschinenbau-2/ingenieurwesen-maschinenbau-kaelte-und-klimatechnik/',required:{
- 3:['3010','2004','3009','3001','8002','3000'],
- 4:['3004','4003','4005','8004','3008','8001'],
- 7:['6002','6005','3002','7010','7011']},slots:{5:{wahlpflicht:5}}}
+ 7:['6002','3003','3002','7010','7011']},slots:{5:{wahlpflicht:5}}}
 };
 const codes=new Map(CATALOG.map(m=>[m.code,m]));
 for(const [key,path] of Object.entries(TRACKS))for(let term=1;term<=7;term++){
  const required=COMMON[term]||path.required[term]||[];
  for(const code of required)if(!codes.has(code))throw Error('Modulcode fehlt im Handbuch: '+key+' '+term+' '+code);
 }
-let pathway='';
+const pathway='allgemein';
 const studyTermNumber=()=>SEMESTERS.findIndex(t=>t.id===activeTermId())+1;
-function getOverview(number,key=pathway){
- const track=TRACKS[key];
+function getOverview(number){
+ const key=pathway,track=TRACKS.allgemein;
  const required=track?(COMMON[number]||track.required[number]||[]):[];
  return {selected:!!track,track:key,label:track?.label||'',sourceUrl:track?.url||'',
   required:required.map(code=>({...codes.get(code),displayName:code==='8000'?'Coaching-Selbstkompetenz · Teil '+number:codes.get(code).name,shared:code==='8000'})),
@@ -69,14 +57,9 @@ function importModule(item){
 function renderHandbook(){
  const root=$('handbookCatalog');if(!root)return;
  const term=studyTermNumber(),overview=getOverview(term);
- const options='<option value="">Fachrichtung auswählen …</option>'+
-  Object.entries(TRACKS).map(([id,x])=>'<option value="'+id+'" '+(id===pathway?'selected':'')+'>'+h(x.label)+'</option>').join('');
  let html='<div class="st-handbook-intro"><div><h3>Studienverlaufsplan · '+h(activeTerm().label)+'</h3>'+
-  '<p class="sub">Semesterzuordnung nach dem offiziellen Studienverlaufsplan von StudiumPlus. ECTS und Arbeitsaufwand stammen aus dem THM-Modulhandbuch Version 8.</p></div></div>'+
-  '<div class="field"><label for="stPathway">Fachrichtung</label><select id="stPathway">'+options+'</select></div>';
- if(!overview.selected){
-  root.innerHTML=html+'<p class="sub">Bitte zuerst deine Fachrichtung auswählen. Ohne diese Angabe können die Pflichtmodule ab dem 3. Semester falsch sein.</p>';
- }else{
+  '<p class="sub">Allgemeiner Maschinenbau · Semesterzuordnung nach dem offiziellen Studienverlaufsplan von StudiumPlus. ECTS und Arbeitsaufwand stammen aus dem THM-Modulhandbuch Version 8.</p></div></div>';
+ {
   const exists=overview.required.filter(modulePresent),missing=overview.required.filter(m=>!modulePresent(m));
   const row=m=>{
    const label=m.shared?' · ein gemeinsames Modul für Semester 1 und 2':'';
@@ -110,7 +93,7 @@ function renderHandbook(){
   const unlisted=imported.filter(m=>!accepted.has(m.handbookCode));
   if(unlisted.length)html+='<p class="sub" role="status">Hinweis: '+unlisted.length+' früher übernommene Module sind in diesem Studienverlaufsplan nicht als feste Pflichtmodule aufgeführt ('+
     unlisted.map(m=>h(m.name)).join(', ')+'). Sie bleiben zur Sicherheit unverändert. Bitte prüfe, ob es deine individuellen Wahlmodule sind.</p>';
-  html+='<p class="sub small">Die Wahlmöglichkeiten sind Angebotsbeispiele, kein verbindlicher Stunden- oder Prüfungsplan. Bei Änderungen der Fachrichtung werden deine gespeicherten Module und Lernzeiten nicht automatisch verschoben oder gelöscht.</p>';
+  html+='<p class="sub small">Die Wahlmöglichkeiten sind Angebotsbeispiele, kein verbindlicher Stunden- oder Prüfungsplan. Bereits gespeicherte Module und Lernzeiten werden nicht automatisch verschoben oder gelöscht.</p>';
   root.innerHTML=html;
   root.querySelector('#handbookImportRequired')?.addEventListener('click',()=>{
    const added=missing.filter(importModule);
@@ -121,10 +104,6 @@ function renderHandbook(){
    if(item&&importModule(item)){persist();notify(item.name+' übernommen')}
   }));
  }
- root.querySelector('#stPathway')?.addEventListener('change',e=>{
-  pathway=TRACKS[e.target.value]?e.target.value:'';
-  renderHandbook();
- });
 }
 const previousRender=render;
 render=function(){previousRender();renderHandbook()};
@@ -133,7 +112,7 @@ window.studyHandbookCatalog={
  modules:CATALOG.map(x=>({...x})),
  tracks:Object.fromEntries(Object.entries(TRACKS).map(([key,x])=>[key,{label:x.label,url:x.url}])),
  getOverview,getPathway:()=>pathway,
- setPathway(value){pathway=TRACKS[value]?value:'';renderHandbook()},
+ setPathway(){renderHandbook()},
  refresh:renderHandbook
 };
 renderHandbook();
