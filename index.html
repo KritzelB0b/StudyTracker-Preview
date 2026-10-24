@@ -122,8 +122,17 @@ a{color:#f39146}a:hover{color:#ffb775}
 .btn-ghost.btn-icon span{display:block;line-height:1}
 @media(prefers-reduced-motion:reduce){.btn-ghost{transition:none}}
 </style><style id="st-copilot-theme">
-.cp-summary{margin-top:0}.cp-summary .title-row{margin-bottom:8px}.cp-summary h2{font-size:18px}.cp-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #49443f}.cp-row:last-child{border-bottom:0}.cp-row>span:first-child{min-width:0;overflow-wrap:anywhere}.cp-row small{display:block;color:#bab0a4;margin-top:4px}.cp-row>span:last-child{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end;color:#cbbfb1;font-size:12px;white-space:nowrap}.cp-row strong{color:#ffc084;font-size:12px}
-@media(max-width:650px){.cp-row{align-items:flex-start;flex-direction:column;gap:5px}.cp-row>span:last-child{justify-content:flex-start;white-space:normal}}
+.cp-summary{margin:0;padding:13px 15px!important;min-width:0;align-self:start}
+.cp-summary .title-row{margin-bottom:4px;gap:8px}
+.cp-summary h2{font-size:15px;margin:0}
+.cp-summary .btn-small{padding:4px 7px;min-height:28px}
+.cp-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #49443f;font-size:12px;line-height:1.3;min-width:0}
+.cp-row:last-child{border-bottom:0}
+.cp-row>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cp-row>span:last-child{display:flex;gap:5px;align-items:center;justify-content:flex-end;color:#cbbfb1;font-size:11px;white-space:nowrap;flex-shrink:0}
+.cp-row strong{color:#ffc084;font-size:11px}
+.cp-summary>p.sub{font-size:12px;margin:8px 0 0}
+@media(max-width:650px){.cp-summary{padding:12px!important}.cp-row{gap:6px}.cp-row>span:last-child{font-size:10px}.cp-row strong{font-size:10px}}
 @media(max-width:700px){
  .top{display:flex;flex-direction:column;align-items:stretch;gap:9px;margin-bottom:12px}
  .top .brand{align-self:flex-start}
@@ -192,4 +201,4 @@ a{color:#f39146}a:hover{color:#ffb775}
   <p id="stEntryEditError" class="st-edit-error" role="alert"></p>
   <div class="st-edit-actions"><button type="button" id="stEntryEditCancel" class="secondary">Abbrechen</button><button type="submit" class="primary" id="stEntryEditSave">Änderungen speichern</button></div>
  </form>
-</dialog><script src="./studytracker-app.js?v=12"></script><script src="./studytracker-handbook.js?v=4"></script><script src="./studytracker-ects.js?v=2"></script><script src="./studytracker-copilot.js?v=2"></script><script src="./privacy-settings.js?v=2"></script><script src="./public-reader.js?v=7"></script><script type="module" src="./pdf-reader.js?v=7"></script><script type="module" src="./pdf-annotations.js?v=7"></script><script type="module" src="./private-cloud.js?v=11"></script><script type="module" src="./pdf-cloud-sync.js?v=5"></script><script>window.studyPdfAnnotationsReady=false; window.addEventListener("load",()=>{setTimeout(()=>{if(!window.studyPdfAnnotationsReady){const msg=document.getElementById("stPdfMessage");if(msg)msg.textContent="Anmerkungen konnten nicht geladen werden. Bitte mit Strg + F5 aktualisieren oder die Browser-Konsole prüfen.";console.error("StudyTracker: pdf-annotations.js was not initialized")}},1800)});</script></body></html>
+</dialog><script src="./studytracker-app.js?v=12"></script><script src="./studytracker-handbook.js?v=4"></script><script src="./studytracker-ects.js?v=2"></script><script src="./studytracker-copilot.js?v=3"></script><script src="./privacy-settings.js?v=2"></script><script src="./public-reader.js?v=7"></script><script type="module" src="./pdf-reader.js?v=7"></script><script type="module" src="./pdf-annotations.js?v=7"></script><script type="module" src="./private-cloud.js?v=11"></script><script type="module" src="./pdf-cloud-sync.js?v=5"></script><script>window.studyPdfAnnotationsReady=false; window.addEventListener("load",()=>{setTimeout(()=>{if(!window.studyPdfAnnotationsReady){const msg=document.getElementById("stPdfMessage");if(msg)msg.textContent="Anmerkungen konnten nicht geladen werden. Bitte mit Strg + F5 aktualisieren oder die Browser-Konsole prüfen.";console.error("StudyTracker: pdf-annotations.js was not initialized")}},1800)});</script></body></html>
