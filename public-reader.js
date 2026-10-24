@@ -237,7 +237,7 @@
   lastPublicFetch=Date.now();
   const current=++publicRequestId;
   try{
-   const resp=await fetch(API+'/public/view',{cache:'no-store',headers:{'Cache-Control':'no-cache'}});
+   const resp=await fetch(API+'/public/view?fresh='+Date.now(),{cache:'no-store'});
    if(!resp.ok)throw Error(resp.status===404?'nicht aktiviert':'Serverantwort '+resp.status);
    const body=await resp.json();
    if(!body||!Array.isArray(body.fields))throw Error('Unerwartetes öffentliches Datenformat');
