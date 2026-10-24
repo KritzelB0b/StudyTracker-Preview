@@ -263,6 +263,9 @@ async function cloudConnect(){
  cloudBusy=true;cloudView();let needsPush=false;
  try{
   const before=snapshot(),remote=await cloudRequest('/sync'),server=normalizedRemote(remote);
+  // A resumed test session is only allowed to reveal editor data after the
+  // server accepts its token. Never unlock the local editor for an expired token.
+  accessGate(true);
   if(snapshot()!==before){cloudStatus('Während des Ladens wurden lokale Daten geändert. Synchronisierung wird erneut geprüft.');return}
   const checkpoint=localStorage.getItem(CHECKPOINT_KEY);
   const freshBrowser=localStorage.getItem(KEY)===null;
@@ -270,7 +273,7 @@ async function cloudConnect(){
   else if(checkpoint!==null&&before===checkpoint){cloudApply(server,remote.revision)}
   else if(checkpoint!==null&&server===checkpoint){cloudCommit(remote.revision,server);needsPush=true}
   else if(freshBrowser||cloudEmpty(before)){cloudApply(server,remote.revision)}
-  else if(cloudEmpty(server)){cloudCommit(remote.revision,server);needsPush=true}
+  else if(cloudEmpty(server))cloudPause('Die Test-Cloud enthält noch keine Lernzeiten. Um ein versehentliches Kopieren lokaler Live-Daten zu verhindern, bitte einmalig prüfen, ob du deine lokalen Daten ausdrücklich in die Test-Cloud übernehmen möchtest.');
   else cloudPause('Einmaliger Abgleich nötig: lokale Daten und Cloud unterscheiden sich.');
  }catch(e){
   if(e.status===401)cloudExpire();
